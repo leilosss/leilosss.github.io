@@ -1,0 +1,8 @@
+# 订阅扫雷器 · 后端依赖
+fastapi>=0.110,<1.0            # Web 框架
+uvicorn[standard]>=0.29,<1.0   # ASGI 服务器
+pydantic>=2.6,<3.0             # 入参/出参校验模型
+pandas>=2.2,<3.0               # 月度聚合等数据处理
+openpyxl>=3.1,<4.0             # 微信 .xlsx 账单解析
+chardet>=5.2,<6.0              # 支付宝 CSV 编码探测(GBK 等)
+python-multipart>=0.0.9        # 预留:可选原始文件直传能力(前端默认不上传文件)

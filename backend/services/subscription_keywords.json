@@ -1,0 +1,37 @@
+{
+  "keywords": {
+    "爱奇艺": { "category": "视频", "icon": "🎬", "type": "月度" },
+    "腾讯视频": { "category": "视频", "icon": "🎬", "type": "月度" },
+    "优酷": { "category": "视频", "icon": "🎬", "type": "月度" },
+    "哔哩哔哩": { "category": "视频", "icon": "📺", "type": "月度" },
+    "芒果TV": { "category": "视频", "icon": "📺", "type": "月度" },
+    "Netflix": { "category": "视频", "icon": "🎬", "type": "月度" },
+    "Disney+": { "category": "视频", "icon": "🎬", "type": "月度" },
+    "HBO Max": { "category": "视频", "icon": "🎬", "type": "月度" },
+    "YouTube Premium": { "category": "视频", "icon": "📺", "type": "月度" },
+    "QQ音乐": { "category": "音乐", "icon": "🎵", "type": "月度" },
+    "网易云音乐": { "category": "音乐", "icon": "🎵", "type": "月度" },
+    "酷狗音乐": { "category": "音乐", "icon": "🎵", "type": "月度" },
+    "Spotify": { "category": "音乐", "icon": "🎵", "type": "月度" },
+    "Apple Music": { "category": "音乐", "icon": "🎵", "type": "月度" },
+    "百度网盘": { "category": "工具", "icon": "☁️", "type": "月度" },
+    "WPS": { "category": "工具", "icon": "📄", "type": "月度" },
+    "夸克网盘": { "category": "工具", "icon": "☁️", "type": "月度" },
+    "Notion": { "category": "工具", "icon": "📝", "type": "月度" },
+    "Canva": { "category": "工具", "icon": "🎨", "type": "月度" },
+    "Slack": { "category": "工具", "icon": "💬", "type": "月度" },
+    "Dropbox": { "category": "工具", "icon": "☁️", "type": "月度" },
+    "微信读书": { "category": "阅读", "icon": "📚", "type": "月度" },
+    "知乎": { "category": "阅读", "icon": "💡", "type": "月度" },
+    "喜马拉雅": { "category": "阅读", "icon": "🎧", "type": "月度" },
+    "淘宝88VIP": { "category": "购物", "icon": "🛍️", "type": "年度" },
+    "剪映": { "category": "创作", "icon": "✂️", "type": "月度" },
+    "扫描全能王": { "category": "工具", "icon": "📱", "type": "月度" }
+  },
+  "patterns": [
+    { "match": ".*自动续费.*", "category": "自动续费", "type": "月度" },
+    { "match": ".*会员.*", "category": "会员服务", "type": "月度" },
+    { "match": ".*VIP.*", "category": "会员服务", "type": "月度" },
+    { "match": ".*连续包.*", "category": "自动续费", "type": "月度" }
+  ]
+}

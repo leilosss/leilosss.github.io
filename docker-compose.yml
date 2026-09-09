@@ -1,0 +1,39 @@
+# =============================================================
+# 订阅扫雷器 Subscription Scanner · 一键部署编排
+# 本地开发:  docker compose up --build  (前端 http://localhost:3000)
+# 云服务器:  echo PUBLIC_PORT=80 >> .env && docker compose up -d --build
+# 前端(Next.js)通过服务端路由代理访问后端,浏览器从不直连后端;
+# 后端仅监听容器内网 + 宿主机回环 127.0.0.1:8000(不对外暴露)。
+# =============================================================
+
+services:
+  backend:
+    build: ./backend
+    container_name: ss-backend
+    restart: unless-stopped
+    environment:
+      # 允许跨域直连的前端来源(用前端代理时其实用不到,仅防御性配置)
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      ENV_MODE: ${ENV_MODE:-production}
+    # 仅回环可见,便于宿主机 curl 调试 API;对外不暴露
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  frontend:
+    build: ./frontend
+    container_name: ss-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      # 服务端代理指向 compose 内网服务名(浏览器不可见)
+      API_URL: http://backend:8000
+    ports:
+      - "${PUBLIC_PORT:-3000}:3000"

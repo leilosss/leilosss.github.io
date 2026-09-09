@@ -1,0 +1,23 @@
+# 依赖与构建产物
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.venv/
+
+# 环境变量(含密钥/后端地址,勿提交)
+.env
+.env.local
+
+# 示例与本地临时文件
+samples/generated/
+*.tmp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 本地备份(不入库)
+backup-*/
+*.tar.gz
+.vercel

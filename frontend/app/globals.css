@@ -1,0 +1,406 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================================
+   Trim · vestris 编辑室(2026-09-08 全站换装,方向见 .impeccable/surfaces/home-persuade.md)
+   纸 #F2EFE5 · 墨 #2B2927 · 灰 #6E6861 · 深纸 #E7E1CE
+   鼠尾草绿 #5C7C68(图形/大文字/填充,≥3:1)与 #3E5543(正文级强调,≥4.5:1)
+   锈红 #9E3B2F 仅错误/销毁语义
+   无卡片/圆角/阴影/渐变/玻璃;1px 线 + 纸面判定语法
+   ============================================================= */
+:root {
+  --paper: #f2ede4;
+  --paper-deep: #e7e1ce;
+  --ink: #1a1a1a;
+  --sub: #6e6861; /* 灰,正文级 AA(≈4.7:1) */
+  --sage: #5c7c68; /* 图形/大文字 */
+  --sage-deep: #3e5543; /* 交互/强调/划线 */
+  --sage-tint: rgba(214, 59, 47, 0.07); /* 裁决行浸色:批注红 7%(v12 全站统一红) */
+  --rust: #d63b2f;
+}
+
+@layer base {
+  html { color-scheme: light; scrollbar-color: rgba(26, 26, 26, 0.3) transparent; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI",
+      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-weight: 400;
+    /* v2.0 可读性基线:正文 16px(移动端同样 ≥16px,不缩小);行高 1.7 */
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+  /* 极淡纸面噪点(内联 SVG 纹理,非渐变) */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.025;
+  }
+  * { border-color: var(--ink); }
+  ::selection { background: var(--rust); color: var(--paper); }
+  :focus-visible { outline: 1.5px solid var(--rust); outline-offset: 3px; }
+  input, textarea { caret-color: var(--ink); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(26, 26, 26, 0.22); border: 3px solid var(--paper); border-radius: 0; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(26, 26, 26, 0.4); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  /* 语义色(仅两处:事实成功态与错误/销毁态) */
+  .ok { color: var(--rust); }
+  .err { color: var(--rust); }
+}
+
+@layer components {
+  /* ---- 字体工具 ---- */
+  .serif-i { font-family: var(--font-instrument), Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; letter-spacing: 0; }
+  /* 展示行:Geist 500,紧字距,平衡换行(大标题由 EditorialLine 逐字显影) */
+  .display {
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+  /* 标签:Geist 600 大写 + 宽字距(替代旧等宽) */
+  .tag {
+    font-family: var(--font-geist), -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+  }
+  .tag-lg { letter-spacing: 0.2em; }
+  /* 正文内文本链接:纸下划线,hover 转鼠尾草绿 */
+  .linku {
+    text-decoration: underline;
+    text-decoration-color: rgba(26, 26, 26, 0.3);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+    transition: color 0.18s ease, text-decoration-color 0.18s ease;
+  }
+  .linku:hover { color: var(--rust); text-decoration-color: var(--rust); }
+  /* 按钮:直角墨块;hover 有一道 45° 斜切刀锋滑入(awwWW 几何语言 → 纸面版)
+     刀 = ::after 色块,在文字下层推进(文字无需换色,无闪烁);--blade 缺失的
+     变体(btn-paper/light)刀为透明 → 退化为原有底色过渡 */
+  .btn {
+    position: relative; isolation: isolate; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem;
+    font-weight: 600; font-size: 13px; letter-spacing: 0.03em; line-height: 1;
+    padding: 0.8rem 1.2rem;
+    border: 1px solid var(--ink);
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  }
+  .btn::after {
+    content: ""; position: absolute; inset: -1px -40%; z-index: -1;
+    background: var(--blade, transparent);
+    transform: translateX(-130%) skewX(-24deg); /* 斜刃置于左外,刀锋 = 前沿斜边 */
+    will-change: transform;
+  }
+  .btn-ink { background: var(--ink); color: var(--paper); --blade: var(--rust); }
+  .btn-ink:hover { background: var(--rust); border-color: var(--rust); }
+  .btn-paper { background: transparent; color: var(--ink); }
+  .btn-paper:hover { background: var(--ink); color: var(--paper); }
+  .btn-light { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  .btn-light:hover { background: var(--rust); color: var(--paper); border-color: var(--rust); }
+  /* 刀锋滑动只对可动用户生效;reduce 下 hover 由上面原有底色过渡接管 */
+  @media (prefers-reduced-motion: no-preference) {
+    .btn::after { transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+    .btn:hover::after, .btn:focus-visible::after { transform: translateX(0) skewX(-24deg); }
+  }
+  /* v12 印章 CTA:双线红框公章 + 红字 + 内衬线;hover 红底倒印 */
+  .stamp-cta {
+    display: inline-block;
+    border: 2px solid var(--rust);
+    color: var(--rust);
+    padding: 2px;
+    position: relative;
+    transform-origin: 50% 50%;
+    transition: background-color 0.22s ease, color 0.22s ease;
+  }
+  .stamp-cta-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--rust);
+    padding: 0.72rem 1.5rem;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .stamp-cta:hover { background: var(--rust); color: var(--paper); }
+  .stamp-cta:hover .stamp-cta-inner { border-color: rgba(242, 237, 228, 0.6); }
+  @media (prefers-reduced-motion: no-preference) {
+    .stamp-cta { transition-property: background-color, color, box-shadow; }
+    .stamp-cta:active { transform: rotate(-1.2deg) scale(0.98); }
+  }
+    /* 数字等宽对齐 */
+  .num { font-variant-numeric: tabular-nums; }
+  /* ---- v10 衬线展示行(rsquad Cortese 大写展示语言的 Instrument 移植)----
+     Instrument Serif 400 大写直体 + 紧字距;CJK 回退宋体系,与 Geist 正文成对 */
+  .display-serif {
+    font-family: var(--font-instrument), Georgia, "Songti SC", "SimSun", serif;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    text-transform: uppercase;
+  }
+  /* 横向滚动不露滚动条(账本窄屏) */
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}
+
+/* =============================================================
+   v2.0 排版系统(VALUE FIRST · 可读性铁律)
+   三个声部,各司其职,不越界:
+     ① 展示声部 .display / .display-serif —— 仅品牌、Hero、Section Title
+     ② 正文声部(默认 body)—— 一切叙述文字,≥16px,行高 1.7,不缩小
+     ③ 数据声部 .mtag / .num / .figure —— 标签、金额、操作词(等宽/tabular)
+   艺术字体(Instrument Serif)禁止承担正文与长段落。
+   ============================================================= */
+@layer components {
+  /* 正文段落:移动端同样 16px 起(不做 13px 小字正文) */
+  .prose-body {
+    font-size: 16px;
+    line-height: 1.75;
+    color: rgba(26, 26, 26, 0.86);
+  }
+  .prose-sm { font-size: 15px; line-height: 1.7; color: var(--sub); }
+  /* 数据字号阶梯(账单/收据式:数字永远比说明大一档) */
+  .figure {
+    font-family: var(--font-geist), -apple-system, sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+  }
+  .figure-xl { font-size: clamp(52px, 12vw, 116px); }
+  .figure-lg { font-size: clamp(34px, 7.5vw, 62px); }
+  .figure-md { font-size: clamp(24px, 5vw, 34px); }
+  /* 章节标题(Section Title):超粗无衬线 + 紧字距 */
+  .sect {
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+    text-wrap: balance;
+    font-size: clamp(28px, 5.2vw, 46px);
+  }
+  /* 规则线上的小标签(元信息行) */
+  .rule-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    border-top: 1px solid rgba(26, 26, 26, 0.15);
+    padding-top: 0.6rem;
+  }
+}
+
+/* =============================================================
+   纸面判定语法(IO/JS 加 .is-on / .is-in 驱动,无静态开场)
+   ============================================================= */
+/* 单划痕:行被判 CUT 后从左划出 */
+.cut-strike { position: relative; }
+.cut-strike::after {
+  content: ""; position: absolute; left: -0.12em; right: -0.12em; top: 52%;
+  height: 1.5px; background: var(--rust);
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cut-strike.is-cut::after { transform: scaleX(1); }
+/* 双线交叉(重复扣费冲突标记,仅示例图/语法图例) */
+.x-strike { position: relative; display: inline-block; }
+.x-strike::before, .x-strike::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 52%; height: 1.5px;
+  background: var(--rust); transform-origin: center;
+}
+.x-strike::before { transform: rotate(9deg); }
+.x-strike::after { transform: rotate(-9deg); }
+
+/* 逐字显影(vestris 签名时刻:展示行按字/字母依次浮起) */
+.ltrs .ch { display: inline-block; opacity: 0; }
+.ltrs.is-on .ch { animation: ch-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--i, 0) * 16ms); }
+@keyframes ch-in { from { opacity: 0; transform: translateY(0.4em); } to { opacity: 1; transform: none; } }
+
+/* 区块浮现(段落/行,非标题) */
+.reveal { opacity: 0; transform: translateY(10px); }
+.reveal.is-in { animation: rise-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* 页面切换:纸页闪切 */
+@keyframes page-dip { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 1; } }
+.page-dip { animation: page-dip 0.38s ease-out both; }
+
+/* 顶层滚动进度:粘顶细鼠尾草线(浏览器表面) */
+.progress-rail { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 70; pointer-events: none; }
+.progress-rail > i { display: block; height: 100%; width: 0; background: var(--rust); }
+
+/* 裁切线 = 印刷裁切语法(打孔虚线底 + 滚动实切痕)
+   base:纸缘打孔虚线(未裁状态);cut:鼠尾草深实线,scaleY 随阅读深度下放
+   (JS 由 cut-line.tsx 按 scrollY/scrollHeight 驱动,同 header 进度轨算法) */
+.cutline-base {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(214, 59, 47, 0.45) 0 2px,
+    transparent 2px 10px
+  );
+}
+.cutline-cut {
+  position: absolute; inset: 0;
+  transform: scaleY(0);
+  transform-origin: top;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cutline-cut { transition: transform 0.18s linear; }
+}
+
+@media print {
+  .progress-rail, .cutline, .no-print { display: none !important; }
+  body::before { display: none; }
+}
+
+/* =============================================================
+   v11 车间系统(内页 Workbench:上传/报告/指南 —— 红笔批注层)
+   「楼上编辑室(绿裁定) / 楼下裁切车间(红批注)」;全局共享
+   1px 线/纸面/无卡片圆角阴影渐变纪律;页码层 token 见 tailwind。
+   ============================================================= */
+/* 等宽标签(车间层):Geist Mono 600 大写 + 超宽字距 —— 数据/操作/元信息 */
+.mtag {
+  font-family: var(--font-geist-mono), ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Menlo", monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.mtag-lg { letter-spacing: 0.3em; }
+
+/* 纸棱:1px 硬偏移 + 极淡晕(无模糊阴影的纸厚度;仅工作台纸条/便签) */
+.paper-lift { box-shadow: 0 1px 0 rgba(26, 26, 26, 0.12), 0 2px 5px rgba(26, 26, 26, 0.05); }
+
+/* 内页工作台焦点:批注红(车间层 override;首页仍鼠尾草绿) */
+.bench :focus-visible { outline: 1.5px solid var(--rust); outline-offset: 3px; }
+.bench ::selection { background: var(--rust); color: var(--paper); }
+
+/* CUT 红划痕(车间版划红线;首页 sageDeep 划痕属编辑室裁定层) */
+.cut-strike-red { position: relative; }
+.cut-strike-red::after {
+  content: ""; position: absolute; left: -0.1em; right: -0.1em; top: 54%;
+  height: 1.5px; background: var(--rust);
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cut-strike-red.is-cut::after { transform: scaleX(1); }
+
+/* 盖章(GSAP 驱动 scale/opacity;此处只给基础态) */
+.stampable { transform-origin: 50% 50%; }
+
+/* =============================================================
+   CUT 品牌交互(v2.0 核心记忆点)—— 纸张被裁剪的物理隐喻
+   点 CUT:① 红裁剪线自左划过 ② 纸条向左轻移并微倾 ③ CUT 印章落下
+   ④ 金额划掉归零 ⑤ 「SAVED ¥N / YEAR」浮出。全部 ≤0.5s,克制有目的。
+   ============================================================= */
+/* CUT 印章:红双线方章,盖下时轻微旋转回正 */
+.cut-stamp {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid var(--rust); color: var(--rust);
+  padding: 2px 7px; letter-spacing: 0.18em; font-weight: 700; font-size: 10px;
+  transform: rotate(-8deg) scale(1.5); opacity: 0;
+}
+.is-cut .cut-stamp,
+.cut-stamp.is-on { animation: stamp-down 0.34s cubic-bezier(0.2, 1.2, 0.4, 1) forwards; }
+@keyframes stamp-down {
+  0% { transform: rotate(-14deg) scale(1.6); opacity: 0; }
+  60% { transform: rotate(-6deg) scale(0.94); opacity: 1; }
+  100% { transform: rotate(-6deg) scale(1); opacity: 1; }
+}
+
+/* 金额归零:原价划掉 + 新价(¥0)自下浮入 */
+.amt-swap { position: relative; display: inline-block; }
+.amt-swap .amt-old { transition: opacity 0.3s ease; }
+.amt-swap.is-cut .amt-old { opacity: 0.4; }
+.amt-new { display: inline-block; opacity: 0; transform: translateY(0.35em); }
+.is-cut .amt-new { animation: amt-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) 0.14s forwards; }
+@keyframes amt-in { to { opacity: 1; transform: none; } }
+
+/* 「SAVED ¥N / YEAR」条:裁定后自纸条下缘浮出 */
+.saved-note { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.36s ease, opacity 0.3s ease; }
+.is-cut .saved-note { max-height: 3.2rem; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cut-stamp { transform: none; opacity: 1; animation: none !important; }
+  .amt-new { opacity: 1; transform: none; animation: none !important; }
+}
+
+/* 扫描线(GSAP timeline 控制 translateY;红色竖线走纸面) */
+.scanline {
+  position: absolute; left: 6%; right: 6%; top: -2px; height: 2px;
+  background: var(--rust);
+  will-change: transform;
+}
+
+/* 折纸折痕(三折说明与上传折纸共用):折线 = 淡墨 hairline 加高光 */
+.crease {
+  background: repeating-linear-gradient(to bottom, transparent 0 5px, rgba(26, 26, 26, 0.05) 5px 6px);
+}
+
+/* 胶带(隐私便签角):半透明米白斜条 */
+.tape {
+  position: absolute; width: 72px; height: 20px;
+  background: rgba(242, 237, 228, 0.85);
+  border: 1px solid rgba(26, 26, 26, 0.12);
+  box-shadow: 0 1px 0 rgba(26, 26, 26, 0.08);
+}
+
+@media print {
+  .bench, .scanline { display: none !important; }
+}
+
+/* =============================================================
+   v10 增量:裁切揭示 / 无尽纸带 / folio 竖排边注(rsquad-awarding 语言)
+   ============================================================= */
+/* 裁切揭示:品牌样张从"剪开的十字菱形"展开成整版(awwWW clip-path 几何语言 → 纸面版)
+   触发前 = 中间一道交叉剪口(polygon 六点菱形),.is-open 展开为整图 */
+.tclip {
+  clip-path: polygon(50% 0, 50% 0, 100% 50%, 50% 100%, 50% 100%, 0 50%);
+  transition: clip-path 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tclip.is-open { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+
+/* 无尽纸带(rsquad loopScroll 节奏):内容复制两份,track 左移 50% 无缝回环
+   只对可动用户生效;reduce 静态停在首词 */
+.marquee-track { will-change: transform; }
+@media (prefers-reduced-motion: no-preference) {
+  .marquee-track { animation: marquee-x var(--marquee-speed, 46s) linear infinite; }
+}
+@keyframes marquee-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* folio 竖排边注(书脊/出血缘的编辑室元数据) */
+.folio-v {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* 视觉差:滚动时轻微上移(纸张被翻阅的深度;rAF 驱动,见 reveal.tsx ParallaxY) */
+.parallax-y { will-change: transform; }
+
+@media print {
+  .marquee-track { animation: none !important; }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
+  .ltrs .ch { opacity: 1; }
+  .reveal { opacity: 1; transform: none; }
+  .cut-strike::after { transition: none; transform: scaleX(1); }
+  .page-dip { animation: none; }
+  .marquee-track { animation: none !important; }
+  .tclip { clip-path: none; }
+}
