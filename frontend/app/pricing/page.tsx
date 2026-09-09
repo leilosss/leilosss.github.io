@@ -28,7 +28,7 @@ const TIERS = [
       "裁剪小票导出",
       "本机加密暂存 7 天",
     ],
-    cta: { label: "START TRIMMING", href: "/upload" },
+    cta: { label: "IMPORT BILL", href: "/upload" },
     primary: true,
   },
   {
@@ -223,7 +223,7 @@ export default function PricingPage() {
         <p className="prose-body mt-4 max-w-[42ch]">不需要注册,不连银行卡,30 秒出结果。</p>
         <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
           <Link href="/upload" className="stamp-cta self-start">
-            <span className="stamp-cta-inner">START TRIMMING</span>
+            <span className="stamp-cta-inner">IMPORT BILL</span>
           </Link>
           <Link href="/report?d=demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust">
             先看示例报告 →

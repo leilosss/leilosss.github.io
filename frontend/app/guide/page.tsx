@@ -89,10 +89,10 @@ export default function GuidePage() {
 
       <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
         <Link href="/upload" className="stamp-cta self-start">
-          <span className="stamp-cta-inner">START TRIMMING</span>
+          <span className="stamp-cta-inner">IMPORT BILL</span>
         </Link>
         <Link href="/report?d=demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust">
-          先看示例报告 →
+          TRY DEMO →
         </Link>
       </div>
 

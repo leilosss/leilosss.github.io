@@ -25,6 +25,18 @@ const TXT_BILL = [
   "2026-08-10 商户消费", "Adobe 创意应用 自动续费", "¥68.00",
 ].join("\n");
 
+// 单笔一次性消费(无周期、无关键词)→ 识别 0 个订阅 → 应走"没有发现订阅"守卫,绝不显示 ¥0 / 年
+const CSV_ONEOFF = [
+  "支付宝交易记录明细查询",
+  "账号:[138****0000]",
+  "起始时间:[2026-06-01 00:00:00]    终止时间:[2026-09-01 23:59:59]",
+  "共 1 笔记录",
+  "-----------------------------------交易记录明细列表-----------------------------------",
+  "交易时间,交易分类,交易对方,商品说明,收/支,金额,收/付款方式,交易状态,交易订单号,商家订单号",
+  "2026-06-10 12:00:00,日用百货,某商店,一箱矿泉水,支出,35.00,余额宝,交易成功,1,1001",
+  "-----------------------------------------------------------------------",
+].join("\n");
+
 async function checkOverflow(page, label) {
   const ov = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
   const ok = ov.s <= ov.c;
@@ -49,7 +61,26 @@ async function checkOverflow(page, label) {
     await ctx.close();
   }
 
-  // ---------- 2. Upload 页三入口检查 ----------
+  // ---------- 2. 首页:IMPORT BILL / TRY DEMO 两个核心按钮 + 隐私三条 ----------
+  {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const p = await ctx.newPage();
+    await p.goto(BASE + "/", { waitUntil: "networkidle" });
+    await p.waitForTimeout(600);
+    const txt = await p.locator("body").innerText();
+    const importBtn = await p.locator("text=IMPORT BILL").count();
+    const demoBtn = await p.locator("text=TRY DEMO").count();
+    const order = { importIdx: txt.indexOf("IMPORT BILL"), demoIdx: txt.indexOf("TRY DEMO") };
+    const ok = importBtn >= 1 && demoBtn >= 1 && order.importIdx > 0 && order.importIdx < order.demoIdx;
+    const privacy = ["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS"].every((s) => txt.includes(s));
+    const flowShown = ["导入账单", "自动分析", "看到一年花多少", "看到一年省多少"].every((s) => txt.includes(s));
+    console.log("首页按钮: IMPORT BILL", importBtn, "| TRY DEMO", demoBtn, "| 主按钮在前:", ok ? "OK" : "FAIL");
+    console.log("首页隐私三条:", privacy ? "OK" : "FAIL", "| 流程四步:", flowShown ? "OK" : "FAIL");
+    if (!ok || !privacy || !flowShown) allOk = false;
+    await ctx.close();
+  }
+
+  // ---------- 2.5. Upload 页三入口检查 ----------
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, permissions: ["clipboard-read", "clipboard-write"] });
     const p = await ctx.newPage();
@@ -79,7 +110,7 @@ async function checkOverflow(page, label) {
     await ctx.close();
   }
 
-  // ---------- 3. TRY DEMO → 完整报告(非空、非 ¥0) ----------
+  // ---------- 3. TRY DEMO → 完整报告(非空、非 ¥0、核心标签齐全) ----------
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
@@ -92,8 +123,15 @@ async function checkOverflow(page, label) {
     const annual = txt.match(/¥3,936/);
     const potential = txt.match(/¥1,836/);
     const zero = /¥0\s*\/\s*年/.test(txt) && !/KEEP[\s\S]{0,80}¥0/.test(txt); // 允许 KEEP 区个别 ¥0 但头条不能是 0
+    const yearLabel = /YEARLY SPEND/.test(txt);
+    const potLabel = /POTENTIAL SAVINGS/.test(txt);
     console.log("DEMO 报告:", hasCut ? "OK(有 YOU CAN CUT)" : "FAIL", "| 年度总额 ¥3,936:", !!annual, "| 可省 ¥1,836:", !!potential);
-    if (!hasCut || !annual || !potential) allOk = false;
+    console.log("DEMO 标签: YEARLY SPEND:", yearLabel ? "OK" : "FAIL", "| POTENTIAL SAVINGS:", potLabel ? "OK" : "FAIL");
+    if (!hasCut || !annual || !potential || !yearLabel || !potLabel) allOk = false;
+    // 每条被裁行应显示 POTENTIAL SAVING ¥X / 年
+    const savingNotes = await p.locator("text=POTENTIAL SAVING").count();
+    console.log("DEMO 行级 POTENTIAL SAVING 出现次数:", savingNotes, savingNotes >= 3 ? "OK" : "FAIL");
+    if (savingNotes < 3) allOk = false;
     await ctx.close();
   }
 
@@ -140,7 +178,29 @@ async function checkOverflow(page, label) {
     allOk = false;
   }
 
-  // ---------- 6. PASTE BILL(剪贴板)仍可用 ----------
+  // ---------- 6. ¥0 守卫:单笔一次性账单 → 不出现 ¥0 / 年 ----------
+  try {
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const p = await ctx.newPage();
+    await p.goto(BASE + "/upload", { waitUntil: "networkidle" });
+    const oneoffPath = os.tmpdir() + "/trim-test-oneoff.csv";
+    fs.writeFileSync(oneoffPath, CSV_ONEOFF, "utf8");
+    const input = p.locator('input[type="file"]');
+    await input.setInputFiles(oneoffPath);
+    await p.waitForURL(/report\?d=/, { timeout: 20000 });
+    await p.waitForTimeout(1800);
+    const txt = await p.locator("body").innerText();
+    const guardShown = /没有发现订阅|没有周期性订阅/.test(txt);
+    const noZero = !/¥0\s*\/\s*年/.test(txt);
+    console.log("¥0 守卫: 无订阅提示:", guardShown ? "OK" : "FAIL", "| 无 ¥0/年 头条:", noZero ? "OK" : "FAIL");
+    if (!guardShown || !noZero) allOk = false;
+    await ctx.close();
+  } catch (e) {
+    console.log("¥0 守卫: FAIL(异常)", e.message);
+    allOk = false;
+  }
+
+  // ---------- 7. PASTE BILL(剪贴板)仍可用 ----------
   try {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, permissions: ["clipboard-read", "clipboard-write"] });
     const p = await ctx.newPage();

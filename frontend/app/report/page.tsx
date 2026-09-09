@@ -98,7 +98,7 @@ function ReportImpl() {
         </p>
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <Link href="/upload" className="stamp-cta self-start">
-            <span className="stamp-cta-inner">START TRIMMING</span>
+            <span className="stamp-cta-inner">IMPORT BILL</span>
           </Link>
           <Link href="/report?d=demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust">
             看示例报告 →
@@ -109,6 +109,33 @@ function ReportImpl() {
   }
 
   const subs = report.subscriptions;
+
+  /* 防 ¥0 头条:识别到 0 个订阅时不渲染空数字,引导换一份账单或看示例 */
+  if (subs.length === 0) {
+    return (
+      <div className="mx-auto max-w-[520px] px-5 py-24 sm:px-8">
+        <p className="mtag text-[10px] text-sub">NO MATCH · 没有发现订阅</p>
+        <h1 className="mt-4 text-[clamp(28px,6vw,44px)] font-extrabold leading-[1.05] tracking-[-0.035em] text-ink">
+          这份账单里没有周期性订阅
+        </h1>
+        <p className="prose-body mt-5">
+          可能是单笔消费居多,或时间范围太短。换一份时间更长的账单试试;或者先看看示例报告长什么样。
+        </p>
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+          <Link href="/upload" className="stamp-cta self-start">
+            <span className="stamp-cta-inner">IMPORT BILL</span>
+          </Link>
+          <Link
+            href="/report?d=demo"
+            className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust"
+          >
+            看示例报告 →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const cutList = subs.filter((s) => decisions[String(s.id)] === "cut");
   const cutAnnual = cutList.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
   const platform = report.platform === "wechat" ? "wechat" : "alipay";

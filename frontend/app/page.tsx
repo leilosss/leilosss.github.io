@@ -88,19 +88,20 @@ export default function Home() {
               把账单导入进来,Trim 算出你的年度订阅支出,并找出可以裁掉的部分。
             </p>
 
-            {/* 主 CTA + 次入口(第一屏可点) */}
+            {/* 主 CTA + 次入口(第一屏可点):IMPORT BILL / TRY DEMO 两个核心按钮 */}
             <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
-              <Link href="/upload" className="stamp-cta self-start" aria-label="开始裁剪">
+              <Link href="/upload" className="stamp-cta self-start" aria-label="导入账单">
                 <span className="stamp-cta-inner">
-                  START TRIMMING
+                  IMPORT BILL
                   <ArrowRight size={15} strokeWidth={2.2} aria-hidden />
                 </span>
               </Link>
               <Link
                 href="/report?d=demo"
-                className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust"
+                className="mtag border border-ink/35 px-4 py-3.5 text-center text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
+                aria-label="查看示例报告"
               >
-                先看示例报告 →
+                TRY DEMO
               </Link>
             </div>
 
@@ -122,9 +123,9 @@ export default function Home() {
               <strong className="font-semibold text-ink">断开网络也能用</strong>,你可以自己验证这一点。
             </p>
 
-            {/* 30 秒路径(把流程摆在第一屏,消除未知) */}
+            {/* 流程一眼看懂:导入 → 分析 → 一年花多少 → 一年省多少 */}
             <ol className="mt-11 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-ink/15 pt-5">
-              {["打开", "导入账单", "自动识别", "看到能省多少"].map((s, i) => (
+              {["导入账单", "自动分析", "看到一年花多少", "看到一年省多少"].map((s, i) => (
                 <li key={s} className="mtag flex items-center gap-3 text-[9.5px] text-sub">
                   {i > 0 && <span aria-hidden className="text-ink/25">→</span>}
                   <span className={i === 3 ? "text-rust" : ""}>{s}</span>
@@ -190,15 +191,15 @@ export default function Home() {
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
               <Link href="/upload" className="stamp-cta self-start">
                 <span className="stamp-cta-inner">
-                  算算我的
+                  IMPORT BILL
                   <ArrowRight size={15} strokeWidth={2.2} aria-hidden />
                 </span>
               </Link>
               <Link
                 href="/report?d=demo"
-                className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust"
+                className="mtag border border-ink/35 px-4 py-3.5 text-center text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
               >
-                查看示例报告 →
+                TRY DEMO
               </Link>
             </div>
           </div>
@@ -243,15 +244,15 @@ export default function Home() {
             <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-8">
               <Link href="/upload" className="stamp-cta bg-paper" style={{ borderColor: "var(--rust)" }}>
                 <span className="stamp-cta-inner">
-                  START TRIMMING
+                  IMPORT BILL
                   <ArrowRight size={15} strokeWidth={2.2} aria-hidden />
                 </span>
               </Link>
               <Link
                 href="/report?d=demo"
-                className="text-[15px] font-semibold text-paper underline decoration-paper/40 decoration-1 underline-offset-[6px] transition-colors hover:text-white"
+                className="mtag border border-paper/40 px-4 py-3.5 text-center text-[11px] text-paper transition-colors hover:border-paper hover:bg-paper hover:text-ink"
               >
-                查看示例报告 →
+                TRY DEMO
               </Link>
             </div>
           </div>

@@ -7,7 +7,7 @@
 //   · 横向划动 = 裁(移动端最自然的手势,12 Brews 精神)
 //   · 点击 CUT/KEEP 文字标记 = 切换(无标准按钮组件)
 //   · 裁定瞬间:红裁剪线划过 → 纸条左移微倾 → CUT 印章落下 →
-//     金额划掉归零 → 浮出「SAVED ¥N / YEAR」
+//     金额划掉归零 → 浮出「POTENTIAL SAVING ¥N / YEAR」
 // 每条给出裁剪理由(HIGH COST / DUPLICATE / UNUSED / RECURRING)与 CANCEL 入口。
 // =============================================================
 "use client";
@@ -132,7 +132,7 @@ function LedgerRow({
           {/* 裁定后的收益提示 */}
           <div className="saved-note">
             <p className="mtag pt-2 text-[9.5px] text-rust">
-              SAVED {yuan(annual)} / 年
+              POTENTIAL SAVING {yuan(annual)} / 年
             </p>
           </div>
         </div>

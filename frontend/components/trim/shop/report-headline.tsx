@@ -48,7 +48,9 @@ export function ReportHeadline({
     <header className="px-5 pt-8 sm:px-8 sm:pt-10">
       {/* 眉行:标题 + 元信息 */}
       <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-        <p className="mtag text-[10px] text-sub">YOUR SUBSCRIPTION BILL · 你的订阅账单</p>
+        <p className="mtag text-[10px] text-sub">
+          YOUR SUBSCRIPTION BILL · {cycle === "yearly" ? "YEARLY SPEND" : "MONTHLY SPEND"}
+        </p>
         <p className="mtag flex flex-wrap items-center gap-x-3 text-[9px] text-sub/80">
           <span className="num">{generatedAt}</span>
           {isDemo && <span className="text-rust">DEMO · 示例数据</span>}
@@ -72,7 +74,7 @@ export function ReportHeadline({
           <span className="mtag ml-2 align-top text-[11px] text-rust/70">{unit}</span>
         </p>
         <p className="mtag mt-3 text-[11px] text-ink">
-          {cutList.length} 个订阅 · 已按账单证据自动标记
+          POTENTIAL SAVINGS · {cutList.length} 个订阅 · 已按账单证据自动标记
         </p>
       </div>
 

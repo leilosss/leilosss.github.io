@@ -98,7 +98,7 @@ export function HeaderNav() {
             href="/upload"
             className="mtag shrink-0 border-2 border-rust px-3 py-2 text-[9.5px] text-rust transition-colors hover:bg-rust hover:text-paper sm:px-4 sm:py-2.5 sm:text-[10px]"
           >
-            START
+            IMPORT
           </Link>
         </div>
       </header>
