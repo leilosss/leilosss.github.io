@@ -136,7 +136,7 @@ export function UploadBench() {
         setCuttable(report.subscriptions.length);
         setPhase("done");
         slideOutRef.current = id;
-        window.setTimeout(() => router.push(`/report/${id}`), 1500);
+        window.setTimeout(() => router.push(`/report?d=${id}`), 1500);
       } catch (e) {
         stopTimer();
         setErrorMsg(e instanceof Error ? e.message : "无法识别,请检查账单文本");
@@ -263,7 +263,7 @@ export function UploadBench() {
                   <span className="stamp-cta-inner !py-[9px] !text-[13.5px]">PASTE BILL</span>
                 </button>
                 <Link
-                  href="/report/demo"
+                  href="/report?d=demo"
                   className="mtag border border-ink/35 px-4 py-3 text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
                 >
                   TRY DEMO — 用示例数据体验
@@ -350,7 +350,7 @@ export function UploadBench() {
                     识别完成 · 发现 {found} 个订阅,{cuttable} 个可裁剪
                   </p>
                   <Link
-                    href={`/report/${reportId}`}
+                    href={`/report?d=${reportId}`}
                     onClick={(e) => e.stopPropagation()}
                     className="mtag mtag-lg text-[12px] text-rust underline decoration-rust/40 decoration-1 underline-offset-4 transition-colors hover:bg-rust hover:text-paper hover:decoration-transparent"
                   >

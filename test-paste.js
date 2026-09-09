@@ -91,7 +91,7 @@ const CASES = [
       await page.waitForTimeout(400);
       await page.evaluate((t) => navigator.clipboard.writeText(t), c.text);
       await page.keyboard.press("Control+V");
-      await page.waitForURL(/\/report\//, { timeout: 15000 });
+      await page.waitForURL(/\/report\?d=/, { timeout: 15000 });
       await page.waitForTimeout(1500);
 
       const r = await page.evaluate(() => {

@@ -47,7 +47,7 @@ export function HeaderNav() {
     };
   }, []);
 
-  const reportHref = latest ? `/report/${latest}` : "/report/demo";
+  const reportHref = latest ? `/report?d=${latest}` : "/report?d=demo";
 
   return (
     <>

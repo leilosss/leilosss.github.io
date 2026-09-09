@@ -120,7 +120,7 @@ export default function AnnualPage() {
             <span className="stamp-cta-inner">重新体检</span>
           </Link>
           {latestId && (
-            <Link href={`/report/${latestId}`} className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust">
+            <Link href={`/report?d=${latestId}`} className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust">
               打开最近报告 →
             </Link>
           )}

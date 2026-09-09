@@ -225,7 +225,7 @@ export default function PricingPage() {
           <Link href="/upload" className="stamp-cta self-start">
             <span className="stamp-cta-inner">START TRIMMING</span>
           </Link>
-          <Link href="/report/demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust">
+          <Link href="/report?d=demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust">
             先看示例报告 →
           </Link>
         </div>

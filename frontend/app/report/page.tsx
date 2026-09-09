@@ -9,7 +9,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { ReportHeadline, type Cycle } from "@/components/trim/shop/report-headline";
 import { ReportLedger } from "@/components/trim/shop/report-ledger";
@@ -28,10 +28,10 @@ const CANCEL_GUIDES = {
   wechat: "微信 → 我 → 服务 → 钱包 → 支付设置 → 自动续费(免密支付)→ 找到该商户 → 关闭扣费",
 } as const;
 
-export default function ReportPage() {
-  const params = useParams<{ id: string }>();
+function ReportImpl() {
+  const sp = useSearchParams();
   const router = useRouter();
-  const id = params?.id ?? "";
+  const id = sp.get("d") ?? "demo"; // 静态导出:报报告 id 走 query(v2.0 静态化)
   const isDemo = id === "demo";
 
   const [ready, setReady] = React.useState(false);
@@ -100,7 +100,7 @@ export default function ReportPage() {
           <Link href="/upload" className="stamp-cta self-start">
             <span className="stamp-cta-inner">START TRIMMING</span>
           </Link>
-          <Link href="/report/demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust">
+          <Link href="/report?d=demo" className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust">
             看示例报告 →
           </Link>
         </div>
@@ -269,6 +269,14 @@ export default function ReportPage() {
 }
 
 /** 方章按钮(双线红框 + 按下微旋) */
+export default function ReportPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <ReportImpl />
+    </React.Suspense>
+  );
+}
+
 function StampButton({ label, sub, onClick }: { label: string; sub: string; onClick: () => void }) {
   return (
     <button

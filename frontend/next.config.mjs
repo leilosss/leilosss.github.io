@@ -9,7 +9,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: "standalone",
+  output: "export", // 全静态导出(GitHub Pages/任意静态托管;隐私=零服务端)
   eslint: { ignoreDuringBuilds: true }, // 代码质量由 tsc/typecheck 把关
 
   // 生产环境安全响应头(本地 dev 不加,避免影响 HMR 热更新)

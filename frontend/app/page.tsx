@@ -97,7 +97,7 @@ export default function Home() {
                 </span>
               </Link>
               <Link
-                href="/report/demo"
+                href="/report?d=demo"
                 className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust"
               >
                 先看示例报告 →
@@ -195,7 +195,7 @@ export default function Home() {
                 </span>
               </Link>
               <Link
-                href="/report/demo"
+                href="/report?d=demo"
                 className="self-start text-[15px] font-semibold text-ink underline decoration-ink/35 decoration-1 underline-offset-[6px] transition-colors hover:text-rust hover:decoration-rust"
               >
                 查看示例报告 →
@@ -248,7 +248,7 @@ export default function Home() {
                 </span>
               </Link>
               <Link
-                href="/report/demo"
+                href="/report?d=demo"
                 className="text-[15px] font-semibold text-paper underline decoration-paper/40 decoration-1 underline-offset-[6px] transition-colors hover:text-white"
               >
                 查看示例报告 →
