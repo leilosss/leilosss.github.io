@@ -94,7 +94,7 @@ function ReportImpl() {
           这里还没有账单
         </h1>
         <p className="prose-body mt-5">
-          报告可能已销毁,或本机没有这份记录。粘贴一次账单就能重新生成 —— 或先看示例。
+          报告可能已销毁,或本机没有这份记录。导入一次账单就能重新生成 —— 或先看示例。
         </p>
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <Link href="/upload" className="stamp-cta self-start">
@@ -258,7 +258,7 @@ function ReportImpl() {
             <button onClick={() => window.print()} className="text-ink underline decoration-ink/35 decoration-1 underline-offset-4 transition-colors hover:text-rust">
               打印报告
             </button>
-            <Link href="/upload" className="text-sub transition-colors hover:text-ink">重新粘贴账单</Link>
+            <Link href="/upload" className="text-sub transition-colors hover:text-ink">重新导入账单</Link>
             <Link href="/" className="text-sub transition-colors hover:text-ink">返回首页</Link>
           </p>
           <p className="mtag text-[9px] text-sub/80">本机暂存 7 天 · 可随时销毁</p>

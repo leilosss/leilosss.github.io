@@ -1,15 +1,17 @@
 // =============================================================
-// UploadBench —— 粘贴工作台(v12 · 3 步路径之"粘贴即识别")
-// 核心隐喻:把账单"复制 → 粘贴"到裁剪工作台。粘贴为主路径:
-//   idle:无边框无按钮,中央等宽小字「复制账单,粘贴到此处」+ 四角十字;
+// UploadBench —— 导入工作台(v2.1 · 极简三入口,UPLOAD BILL 为主路径)
+// 核心隐喻:把账单"上传/拖入 → 自动分析"到裁剪工作台。三个平权入口:
+//   UPLOAD BILL(主)—— 点击/拖拽上传 CSV·XLSX·TXT,无需选择平台,自动识别;
+//   TRY DEMO —— 直接进入完整示例报告(¥3,936/年,可省 ¥1,836/年);
+//   PASTE BILL(备用)—— 读取剪贴板文本,或全局 Ctrl+V 粘贴。
+// 状态机不变:
+//   idle:上传区 + 两个次级入口;
 //   parsing:纸张浮现,文本逐行显影,红线从上往下扫描(无百分比);
 //   done:抖动定格 → 0.6s 纸滑出 → 自动进报告(附手动「[ 进入裁剪 → ]」);
 //   error:纸被批回(倾斜 + 红 X)+「无法识别,请检查账单文本」。
-// 兜底(不主动引导):文件拖放仍可用(底部极淡小字);两条路都 100% 本地:
-//   粘贴文本 → parsePastedText → detectLocal(浏览器内);
-//   文件 → parseFileLocally → detectLocal —— 后端零调用(隐私硬约束)。
-// 功能保留:重复粘贴覆盖、键盘入口、错误原因、规格三格、自动跳转、
-// 「⚠ 所有识别仅在本地完成,账单数据不会上传」。
+// 三条路径全部 100% 本地(隐私硬约束,后端零调用):
+//   文件(csv/xlsx)→ parseFileLocally;文件(txt)/粘贴文本 → parsePastedText;
+//   → detectLocal(浏览器内识别)。不接非官方 API,不模拟登录,不要求账号密码。
 // =============================================================
 "use client";
 
@@ -22,16 +24,9 @@ import { parseFileLocally } from "@/lib/analyze";
 import { detectLocal } from "@/lib/local-detect";
 import { parsePastedText } from "@/lib/paste-parse";
 import { reportsStore } from "@/lib/store";
+import { MAX_FILE_SIZE } from "@/lib/validation";
 
 type Phase = "idle" | "parsing" | "done" | "error";
-
-/** 首次使用示例:Trim 会把账单识别成什么(与 demo 报告同源口径) */
-const SAMPLE_ROWS = [
-  { name: "Netflix", price: 49, cut: false },
-  { name: "Spotify", price: 15, cut: false },
-  { name: "Adobe Creative Cloud", price: 68, cut: true },
-  { name: "iCloud 存储", price: 6, cut: false },
-] as const;
 
 export function UploadBench() {
   const router = useRouter();
@@ -42,6 +37,7 @@ export function UploadBench() {
   const [cuttable, setCuttable] = React.useState(0);
   const [errorMsg, setErrorMsg] = React.useState("");
   const [clipFailed, setClipFailed] = React.useState(false);
+  const [dragActive, setDragActive] = React.useState(false); // 全局拖拽悬停(高亮上传区)
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const paperRef = React.useRef<HTMLDivElement | null>(null);
@@ -171,30 +167,46 @@ export function UploadBench() {
   const handleFile = React.useCallback(
     async (file: File | undefined | null) => {
       if (!file) return;
-      await recognize(
-        async () => parseFileLocally(file), // 本地解析(文件不出浏览器)
-        [],
-      );
+      await recognize(async () => {
+        // .txt 导出本质是自由文本(与粘贴同形),复用粘贴的启发式解析器更稳
+        if (/\.txt$/i.test(file.name)) {
+          if (file.size > MAX_FILE_SIZE) throw new Error("文件超过 10MB 上限,请导出更小时间范围的账单");
+          return parsePastedText(await file.text());
+        }
+        return parseFileLocally(file); // 本地解析(文件不出浏览器,自动识别平台)
+      }, []);
     },
     [recognize],
   );
 
-  /* window 级贴粘与拖放 */
+  /* window 级贴粘与拖放(拖入文件全页可放;dragActive 驱动上传区高亮) */
   React.useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       handlePaste(e.clipboardData?.getData("text/plain") ?? "");
     };
     const onOver = (e: DragEvent) => e.preventDefault();
+    const onEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) setDragActive(true);
+    };
+    const onLeave = (e: DragEvent) => {
+      // 仅在真正离开窗口(而非进入子元素)时取消高亮
+      if (!e.relatedTarget) setDragActive(false);
+    };
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
+      setDragActive(false);
       handleFile(e.dataTransfer?.files?.[0]);
     };
     window.addEventListener("paste", onPaste);
     window.addEventListener("dragover", onOver);
+    window.addEventListener("dragenter", onEnter);
+    window.addEventListener("dragleave", onLeave);
     window.addEventListener("drop", onDrop);
     return () => {
       window.removeEventListener("paste", onPaste);
       window.removeEventListener("dragover", onOver);
+      window.removeEventListener("dragenter", onEnter);
+      window.removeEventListener("dragleave", onLeave);
       window.removeEventListener("drop", onDrop);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -225,7 +237,7 @@ export function UploadBench() {
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,.xlsx,.xls"
+        accept=".csv,.xlsx,.xls,.txt"
         className="sr-only"
         disabled={phase === "parsing"}
         onChange={(e) => {
@@ -246,60 +258,56 @@ export function UploadBench() {
         {phase === "idle" && (
           <div>
             {/* 标题 + 说明 */}
-            <p className="mtag text-[10px] text-rust">STEP 2 / 3 · 粘贴账单</p>
+            <p className="mtag text-[10px] text-rust">STEP 2 / 3 · 导入账单</p>
             <h1 className="mt-4 text-[clamp(28px,6.4vw,44px)] font-extrabold leading-[1.05] tracking-[-0.035em] text-ink">
-              把账单粘贴到这里
+              把账单交给 Trim
             </h1>
             <p className="prose-body mt-4 max-w-[42ch]">
-              在微信或支付宝的账单页全选复制,回到这里按 Ctrl + V。识别在本机完成。
+              上传文件,自动识别订阅 —— 不用选平台,不用整理数据。
             </p>
 
-            {/* 粘贴感应纸面(明确的落点,不再是空白页) */}
-            <div className="relative mt-8 border border-dashed border-ink/35 bg-paper/60 px-5 py-9 text-center sm:px-8 sm:py-12">
-              <p className="mtag text-[11px] text-ink">按 Ctrl + V 粘贴账单文本</p>
-              <p className="prose-sm mt-2 text-[13.5px]">或长按粘贴(手机) · 也可直接拖入账单文件</p>
-              <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-5">
-                <button onClick={readClipboard} className="stamp-cta">
-                  <span className="stamp-cta-inner !py-[9px] !text-[13.5px]">PASTE BILL</span>
-                </button>
-                <Link
-                  href="/report?d=demo"
-                  className="mtag border border-ink/35 px-4 py-3 text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
-                >
-                  TRY DEMO — 用示例数据体验
-                </Link>
-              </div>
-              {clipFailed && (
-                <p className="prose-sm mt-4 text-[13px] text-rust">
-                  浏览器未授权读取剪贴板 —— 请直接按 Ctrl + V,或长按粘贴。
-                </p>
-              )}
-            </div>
+            {/* 主入口:上传账单文件(点击或拖拽) */}
+            <button
+              type="button"
+              onClick={openFilePicker}
+              className={`mt-8 flex w-full flex-col items-center gap-3 border border-dashed px-5 py-10 text-center transition-colors sm:px-8 sm:py-14 ${
+                dragActive ? "border-rust bg-rust/[0.05]" : "border-ink/35 bg-paper/60 hover:border-ink/60"
+              }`}
+            >
+              <UploadMark />
+              <span className="mtag text-[11px] text-ink">点击选择文件,或拖拽到此处</span>
+              <span className="prose-sm text-[13px]">支持 CSV · XLSX · TXT · 最大 10MB</span>
+              <span aria-hidden className="stamp-cta pointer-events-none mt-3">
+                <span className="stamp-cta-inner !px-8 !py-4 !text-[16px]">UPLOAD BILL</span>
+              </span>
+            </button>
 
-            {/* 示例:Trim 会识别成什么(消除首次使用的未知) */}
-            <div className="mt-9">
-              <p className="rule-label mtag text-[9.5px] text-sub">
-                <span>TRIM 会这样识别</span>
-                <span className="text-ink/40">示例</span>
-              </p>
-              <ul className="mt-1">
-                {SAMPLE_ROWS.map((r) => (
-                  <li key={r.name} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 border-b border-ink/10 py-2.5">
-                    <span className="truncate text-[15px] font-semibold text-ink">{r.name}</span>
-                    <span className="num text-[14px] text-ink">
-                      ¥{r.price}
-                      <span className="text-sub/70">/月</span>
-                    </span>
-                    <span className={`mtag w-[40px] text-right text-[9px] ${r.cut ? "text-rust" : "text-ink/45"}`}>
-                      {r.cut ? "CUT" : "KEEP"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="prose-sm mt-3 text-[13px]">
-                示例数据,非真实账单。判定可随时改 —— 你说了算。
-              </p>
+            {/* 次级入口:示例数据 / 粘贴文本(备用) */}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/report?d=demo"
+                className="mtag flex-1 border border-ink/35 px-4 py-3.5 text-center text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
+              >
+                TRY DEMO
+              </Link>
+              <button
+                type="button"
+                onClick={readClipboard}
+                className="mtag flex-1 border border-ink/35 px-4 py-3.5 text-center text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
+              >
+                PASTE BILL
+              </button>
             </div>
+            {clipFailed && (
+              <p className="prose-sm mt-3 text-[13px] text-rust">
+                浏览器未授权读取剪贴板 —— 请直接按 Ctrl + V,或长按粘贴。
+              </p>
+            )}
+
+            {/* 微信/支付宝说明(仅导出后上传,不接官方 API、不模拟登录、不要求账号密码) */}
+            <p className="prose-sm mt-6 text-[13.5px]">
+              从微信或支付宝导出账单后,直接上传文件。Trim 不连接官方接口、不模拟登录,也不会要求账号密码。
+            </p>
 
             {/* 隐私三条 */}
             <ul className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink/15 pt-5">
@@ -370,7 +378,7 @@ export function UploadBench() {
                       }}
                       className="text-ink underline decoration-ink/40 decoration-1 underline-offset-4 transition-colors hover:text-rust hover:decoration-rust"
                     >
-                      重新粘贴
+                      重新尝试
                     </button>
                     <Link
                       href="/guide"
@@ -415,6 +423,16 @@ function PlusMark() {
   return (
     <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden fill="none">
       <path d="M5.5 0v11M0 5.5h11" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  );
+}
+
+/** 上传主入口图标:箭头入盘(细线,与全站图标同一手绘线条语言) */
+function UploadMark() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 28 28" aria-hidden fill="none" className="text-ink/70">
+      <path d="M14 18V4M14 4L8 10M14 4l6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 20v2a2 2 0 002 2h16a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }

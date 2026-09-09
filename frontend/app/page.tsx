@@ -4,7 +4,7 @@
 // 结构:
 //   HERO   痛点提问 + 一句话解释 + 主 CTA + 隐私三条(第一屏可点)
 //   STORY  01 小数字 → 02 累加 ¥3,936/年 → 03 CUT/KEEP 判定 → 04 省 ¥1,836/年
-//   HOW    OPEN → PASTE → ANALYZE → SEE SAVINGS(30 秒内出结果)
+//   HOW    OPEN → IMPORT → ANALYZE → SEE SAVINGS(30 秒内出结果)
 //   CLOSE  墨带收束 CTA
 // 版式:≥1366 沿用对开(34vw 裁切线 = 中缝);<1366 单页纵向。
 // =============================================================
@@ -85,7 +85,7 @@ export default function Home() {
 
             {/* 一句话解释产品 */}
             <p className="prose-body mt-7 max-w-[40ch] text-[17px] sm:text-[18px]">
-              把账单粘贴进来,Trim 算出你的年度订阅支出,并找出可以裁掉的部分。
+              把账单导入进来,Trim 算出你的年度订阅支出,并找出可以裁掉的部分。
             </p>
 
             {/* 主 CTA + 次入口(第一屏可点) */}
@@ -124,7 +124,7 @@ export default function Home() {
 
             {/* 30 秒路径(把流程摆在第一屏,消除未知) */}
             <ol className="mt-11 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-ink/15 pt-5">
-              {["打开", "粘贴账单", "自动识别", "看到能省多少"].map((s, i) => (
+              {["打开", "导入账单", "自动识别", "看到能省多少"].map((s, i) => (
                 <li key={s} className="mtag flex items-center gap-3 text-[9.5px] text-sub">
                   {i > 0 && <span aria-hidden className="text-ink/25">→</span>}
                   <span className={i === 3 ? "text-rust" : ""}>{s}</span>
@@ -238,7 +238,7 @@ export default function Home() {
               现在就知道<br className="sm:hidden" />你一年能省多少。
             </h2>
             <p className="prose-body mx-auto mt-6 max-w-[38ch] text-paper/75">
-              粘贴一次账单,30 秒看到结果。不需要注册。
+              导入一次账单,30 秒看到结果。不需要注册。
             </p>
             <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-8">
               <Link href="/upload" className="stamp-cta bg-paper" style={{ borderColor: "var(--rust)" }}>

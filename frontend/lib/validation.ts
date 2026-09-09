@@ -15,7 +15,7 @@ export const FileMetaSchema = z.object({
     .number()
     .int()
     .positive("文件为空")
-    .max(MAX_FILE_SIZE, `文件超过 10MB 上限(当前 ${Math.round(0)})MB 以上),请导出更小时间范围的账单`),
+    .max(MAX_FILE_SIZE, "文件超过 10MB 上限,请导出更小时间范围的账单"),
 });
 
 export type FileMeta = z.infer<typeof FileMetaSchema>;

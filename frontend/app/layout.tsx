@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     template: "%s · Trim",
   },
   description:
-    "Find unnecessary subscriptions, calculate your yearly savings, and take control of recurring bills with Trim. 粘贴账单,本地识别自动续费,算出一年能省多少。无需注册,不连银行卡。",
+    "Find unnecessary subscriptions, calculate your yearly savings, and take control of recurring bills with Trim. 上传或粘贴账单,本地识别自动续费,算出一年能省多少。无需注册,不连银行卡。",
   keywords: [
     "订阅管理", "自动续费", "取消订阅", "订阅费用计算", "年度订阅支出",
     "subscription tracker", "subscription calculator", "cancel subscriptions",
