@@ -11,6 +11,7 @@ import type { DetectResult } from "./types";
 export type TrimDecision = "cut" | "keep";
 
 const KEY = "trim-vault-v12";
+const KEY_MATERIAL = "trim-vault-v12-key"; // 密钥物料(与密文同存本机,见下方安全边界注释)
 const TTL_MS = 7 * 24 * 3600 * 1000; // 7 天
 
 interface VaultData {
@@ -43,7 +44,11 @@ function unb64(s: string): Uint8Array<ArrayBuffer> {
 
 async function getKey(): Promise<CryptoKey> {
   if (keyCache) return keyCache;
-  const raw = crypto.getRandomValues(new Uint8Array(32));
+  // 密钥须落盘复用(而非每次页面加载随机生成),否则跨页跳转(静态导出下 /upload → /report
+  // 是整页刷新,JS 模块重新执行)会用新随机密钥解旧密文,导致刚生成的报告"读不出来"。
+  const stored = localStorage.getItem(KEY_MATERIAL);
+  const raw = stored ? unb64(stored) : crypto.getRandomValues(new Uint8Array(32));
+  if (!stored) localStorage.setItem(KEY_MATERIAL, b64(raw));
   keyCache = await crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
   return keyCache;
 }
@@ -60,8 +65,9 @@ export async function vaultInit(): Promise<void> {
       localStorage.removeItem(KEY);
       return;
     }
-    const iv = unb64(data.payload.slice(0, 24));
-    const ct = unb64(data.payload.slice(24));
+    // IV = 12 字节(AES-GCM 推荐长度)→ base64 恰好 16 字符,与写入时 b64(iv) 长度一致
+    const iv = unb64(data.payload.slice(0, 16));
+    const ct = unb64(data.payload.slice(16));
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, await getKey(), ct.buffer as ArrayBuffer);
     mem = JSON.parse(new TextDecoder().decode(plain)) as VaultShape;
   } catch {
