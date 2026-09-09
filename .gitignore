@@ -21,3 +21,5 @@ Thumbs.db
 backup-*/
 *.tar.gz
 .vercel
+# 静态构建产物(推 gh-pages 分支,不进 main)
+frontend/out/
