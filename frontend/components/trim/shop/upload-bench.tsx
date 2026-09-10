@@ -22,11 +22,27 @@ import { gsap } from "gsap";
 
 import { parseFileLocally } from "@/lib/analyze";
 import { detectLocal } from "@/lib/local-detect";
+import { ocrLinesToBillRows } from "@/lib/ocr-parse";
+import { recognizeImage, type OcrProgress } from "@/lib/ocr-local";
 import { parsePastedText } from "@/lib/paste-parse";
 import { reportsStore } from "@/lib/store";
 import { MAX_FILE_SIZE } from "@/lib/validation";
 
 type Phase = "idle" | "parsing" | "done" | "error";
+
+/** 可上传的账单文件(截图走本地 OCR,其余走解析器) */
+const FILE_ACCEPT = ".csv,.xlsx,.xls,.txt,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp";
+const IMAGE_RE = /\.(png|jpe?g|webp)$/i;
+
+/** 截图路径提示(用户要在账单页自己截长图,这里把路径写全) */
+const SHOT_HINTS = [
+  { app: "支付宝", path: "我的 → 账单 → 选择月份 → 截长图" },
+  { app: "微信", path: "我 → 服务 → 钱包 → 账单 → 截长图" },
+] as const;
+
+function isImage(file: File): boolean {
+  return file.type.startsWith("image/") || IMAGE_RE.test(file.name);
+}
 
 export function UploadBench() {
   const router = useRouter();
@@ -38,6 +54,8 @@ export function UploadBench() {
   const [errorMsg, setErrorMsg] = React.useState("");
   const [clipFailed, setClipFailed] = React.useState(false);
   const [dragActive, setDragActive] = React.useState(false); // 全局拖拽悬停(高亮上传区)
+  const [ocrNote, setOcrNote] = React.useState(""); // OCR 阶段字幕(模型下载 / 第 n 段)
+  const [shotHint, setShotHint] = React.useState(false); // OCR 失败时展开截图指引
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const paperRef = React.useRef<HTMLDivElement | null>(null);
@@ -108,14 +126,20 @@ export function UploadBench() {
   };
   React.useEffect(() => stopTimer, []);
 
-  /* ---------- 识别主流程(粘贴与文件共用) ---------- */
+  /* ---------- 识别主流程(粘贴 / 文件 / 截图 共用) ---------- */
   const recognize = React.useCallback(
-    async (build: () => Promise<{ rows: import("@/lib/types").BillRow[]; platform: "alipay" | "wechat" }>, lines: string[] | null) => {
+    async (
+      build: () => Promise<{ rows: import("@/lib/types").BillRow[]; platform: "alipay" | "wechat" }>,
+      lines: string[] | null,
+      isOcr = false,
+    ) => {
       if (phase === "parsing") return;
       setPhase("parsing");
       setProgress(0);
       setErrorMsg("");
       setPasteLines(lines ?? []);
+      setOcrNote("");
+      setShotHint(false);
       stopTimer();
       appearPaper();
       timerRef.current = window.setInterval(() => {
@@ -136,12 +160,48 @@ export function UploadBench() {
       } catch (e) {
         stopTimer();
         setErrorMsg(e instanceof Error ? e.message : "无法识别,请检查账单文本");
+        setShotHint(isOcr); // 截图路径失败时,额外给出"分段截图/改用粘贴"的出路
         setPhase("error");
         rejectPaper();
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [phase, reduce, appearPaper, runScan, rejectPaper],
+  );
+
+  /* ---------- 截图:本地 OCR → 交易数组(逐张识别后合并) ---------- */
+  const runOcr = React.useCallback(
+    async (files: File[]) => {
+      await recognize(
+        async () => {
+          const allRows: import("@/lib/types").BillRow[] = [];
+          let platform: "alipay" | "wechat" = "alipay";
+          let readLines: string[] = [];
+          for (let i = 0; i < files.length; i++) {
+            const prefix = files.length > 1 ? `第 ${i + 1} / ${files.length} 张 · ` : "";
+            const lines = await recognizeImage(files[i], (p: OcrProgress) => {
+              setOcrNote(
+                p.phase === "loading"
+                  ? `${prefix}正在加载识别模型…(首次约 11MB,仅一次)`
+                  : `${prefix}正在识别第 ${p.tile?.index ?? 1} / ${p.tile?.total ?? 1} 段…`,
+              );
+            });
+            setOcrNote(`${prefix}正在读取账目…`);
+            const parsed = ocrLinesToBillRows(lines);
+            platform = parsed.platform;
+            allRows.push(...parsed.rows);
+            // 首张的识别文本显示在纸面上(让用户看到"读到了什么")
+            if (i === 0) readLines = lines;
+          }
+          setPasteLines(readLines.slice(0, 8));
+          if (!allRows.length) throw new Error("没能从截图里读出账目");
+          return { rows: allRows, platform };
+        },
+        null,
+        true,
+      );
+    },
+    [recognize],
   );
 
   /* 手动「进入裁剪」需要报告 id */
@@ -164,9 +224,12 @@ export function UploadBench() {
     [recognize],
   );
 
-  const handleFile = React.useCallback(
-    async (file: File | undefined | null) => {
-      if (!file) return;
+  /** 多选/拖拽统一入口:全是图片走 OCR,否则按账单文件解析(取第一个非图片文件) */
+  const handleFiles = React.useCallback(
+    async (files: File[]) => {
+      if (!files.length) return;
+      if (files.every(isImage)) return runOcr(files);
+      const file = files.find((f) => !isImage(f)) ?? files[0];
       await recognize(async () => {
         // .txt 导出本质是自由文本(与粘贴同形),复用粘贴的启发式解析器更稳
         if (/\.txt$/i.test(file.name)) {
@@ -176,7 +239,7 @@ export function UploadBench() {
         return parseFileLocally(file); // 本地解析(文件不出浏览器,自动识别平台)
       }, []);
     },
-    [recognize],
+    [recognize, runOcr],
   );
 
   /* window 级贴粘与拖放(拖入文件全页可放;dragActive 驱动上传区高亮) */
@@ -195,7 +258,7 @@ export function UploadBench() {
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
       setDragActive(false);
-      handleFile(e.dataTransfer?.files?.[0]);
+      handleFiles(Array.from(e.dataTransfer?.files ?? []));
     };
     window.addEventListener("paste", onPaste);
     window.addEventListener("dragover", onOver);
@@ -210,7 +273,7 @@ export function UploadBench() {
       window.removeEventListener("drop", onDrop);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handlePaste, handleFile]);
+  }, [handlePaste, handleFiles]);
 
   const openFilePicker = () => {
     if (phase === "parsing") return;
@@ -237,11 +300,12 @@ export function UploadBench() {
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,.xlsx,.xls,.txt"
+        accept={FILE_ACCEPT}
+        multiple
         className="sr-only"
         disabled={phase === "parsing"}
         onChange={(e) => {
-          handleFile(e.target.files?.[0]);
+          handleFiles(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
       />
@@ -263,7 +327,7 @@ export function UploadBench() {
               把账单交给 Trim
             </h1>
             <p className="prose-body mt-4 max-w-[42ch]">
-              上传文件,自动识别订阅 —— 不用选平台,不用整理数据。
+              上传账单文件,或直接丢一张账单截图 —— 自动识别订阅,不用选平台,不用整理数据。
             </p>
 
             {/* 主入口:上传账单文件(点击或拖拽) */}
@@ -276,11 +340,32 @@ export function UploadBench() {
             >
               <UploadMark />
               <span className="mtag text-[11px] text-ink">点击选择文件,或拖拽到此处</span>
-              <span className="prose-sm text-[13px]">支持 CSV · XLSX · TXT · 最大 10MB</span>
+              <span className="prose-sm text-[13px]">
+                CSV · XLSX · TXT
+                <span className="mx-1.5 text-ink/30">|</span>
+                <span className="text-rust">截图 PNG / JPG / WEBP(可多选)</span>
+                <span className="mt-1 block text-[12.5px] text-sub/80">单张最大 10MB</span>
+              </span>
               <span aria-hidden className="stamp-cta pointer-events-none mt-3">
                 <span className="stamp-cta-inner !px-8 !py-4 !text-[16px]">UPLOAD BILL</span>
               </span>
             </button>
+
+            {/* 截图路径:先在账单页截长图,再回来上传(识别全在本机) */}
+            <div className="mt-5 border border-ink/20 bg-paperDeep/60 px-5 py-4">
+              <p className="mtag text-[9.5px] text-sub">截图识别 · 先在账单页截一张长图</p>
+              <ul className="mt-3 space-y-2">
+                {SHOT_HINTS.map((h) => (
+                  <li key={h.app} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span className="mtag shrink-0 text-[9.5px] text-ink">{h.app}</span>
+                    <span className="text-[13.5px] leading-relaxed text-sub">{h.path}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mtag mt-3 border-t border-ink/12 pt-2.5 text-[9px] text-rust">
+                ⚠ 截图在本机识别,图片不会上传
+              </p>
+            </div>
 
             {/* 次级入口:示例数据 / 粘贴文本(备用) */}
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -304,9 +389,9 @@ export function UploadBench() {
               </p>
             )}
 
-            {/* 微信/支付宝说明(仅导出后上传,不接官方 API、不模拟登录、不要求账号密码) */}
+            {/* 微信/支付宝说明(仅导出/截图后上传,不接官方 API、不模拟登录、不要求账号密码) */}
             <p className="prose-sm mt-6 text-[13.5px]">
-              从微信或支付宝导出账单后,直接上传文件。Trim 不连接官方接口、不模拟登录,也不会要求账号密码。
+              从微信或支付宝导出账单文件、或直接在账单页截长图,都能上传识别。Trim 不连接官方接口、不模拟登录,也不会要求账号密码。
             </p>
 
             {/* 隐私三条 */}
@@ -348,8 +433,12 @@ export function UploadBench() {
             {/* 纸下状态字幕 */}
             <div className="mt-5 flex min-h-[70px] flex-col items-center gap-2 text-center">
               {phase === "parsing" && (
-                <p className="mtag mtag-lg num text-[11px] text-rust">
-                  正在识别 … 第 {Math.round(progress)} 项 / 共 — 项
+                <p className="mtag mtag-lg text-[11px] text-rust">
+                  {ocrNote || (
+                    <span className="num">
+                      正在识别 … 第 {Math.round(progress)} 项 / 共 — 项
+                    </span>
+                  )}
                 </p>
               )}
               {phase === "done" && reportId && (
@@ -368,13 +457,29 @@ export function UploadBench() {
               )}
               {phase === "error" && (
                 <>
-                  <p className="mtag text-[11px] text-rust">无法识别,请检查账单文本</p>
+                  <p className="mtag text-[11px] text-rust">
+                    {shotHint ? "这张截图没能读出账目" : "无法识别,请检查账单文本"}
+                  </p>
                   <p className="max-w-[46ch] text-[12px] leading-relaxed text-sub">{errorMsg}</p>
-                  <p className="mtag flex gap-8 text-[11px]">
+
+                  {/* 截图路径失败时的两条出路(照旧保留粘贴这条路) */}
+                  {shotHint && (
+                    <ul className="mt-1 max-w-[46ch] space-y-1.5 text-left">
+                      {["请尝试分段截图:把长账单截成 2–3 张,一起选中上传", "或改用「复制文本粘贴」:在账单页全选复制后直接 Ctrl+V"].map((t) => (
+                        <li key={t} className="flex gap-2.5 text-[12.5px] leading-relaxed text-ink">
+                          <span aria-hidden className="mtag shrink-0 text-[9px] text-rust">→</span>
+                          <span>{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <p className="mtag flex flex-wrap justify-center gap-8 text-[11px]">
                     <button
                       onClick={() => {
                         setPhase("idle");
                         setErrorMsg("");
+                        setShotHint(false);
                       }}
                       className="text-ink underline decoration-ink/40 decoration-1 underline-offset-4 transition-colors hover:text-rust hover:decoration-rust"
                     >
@@ -384,7 +489,7 @@ export function UploadBench() {
                       href="/guide"
                       className="text-ink underline decoration-ink/40 decoration-1 underline-offset-4 transition-colors hover:text-rust hover:decoration-rust"
                     >
-                      查看支持格式
+                      {shotHint ? "查看截图指引" : "查看支持格式"}
                     </Link>
                   </p>
                 </>
@@ -394,7 +499,7 @@ export function UploadBench() {
             {/* 规格三格 */}
             <div className="mt-6 flex items-center justify-center gap-x-10">
               {[
-                { label: "方式", v: "粘贴 · 拖放" },
+                { label: "方式", v: "截图 · 粘贴 · 拖放" },
                 { label: "解析", v: "仅本地" },
                 { label: "暂存", v: "本地 7 天" },
               ].map((c, i) => (

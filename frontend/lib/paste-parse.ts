@@ -72,6 +72,14 @@ function extractDate(line: string): string | null {
   return `${m[1]}-${p(m[2])}-${p(m[3])}`;
 }
 
+/** 取行内时刻 → "HH:MM:SS"(没有则 00:00:00)。OCR 常把日期与时间粘在一起("2026-06-1012:00:00") */
+function extractClock(line: string): string {
+  const p = (n: string | undefined) => (n ?? "00").padStart(2, "0");
+  const m = line.replace(DATE_RE, " ").match(TIME_RE);
+  if (!m) return "00:00:00";
+  return `${p(m[1])}:${p(m[2])}:${p(m[3])}`;
+}
+
 function cleanName(line: string): string {
   return line
     .replace(DATE_RE, "")
@@ -82,13 +90,33 @@ function cleanName(line: string): string {
     .trim();
 }
 
+export interface ParseOptions {
+  /**
+   * 日期检索方向。默认 "up"(纯文本粘贴:日期在金额上方)。
+   * OCR 的两种账单版式日期位置相反(微信在金额下方、支付宝在上方),
+   * 靠"最近距离"会取到相邻交易的日期,因此按**序号配对**:
+   * 第 k 个金额锚点 ↔ 第 k 个日期行。仅当两者数量一致时启用,
+   * 否则退回 "nearest"。默认 "up" 保持纯文本粘贴的既有行为。
+   */
+  dateSearch?: "up" | "nearest" | "pair";
+  /** 最少文本行数(默认 4;OCR 的单张小图可以更少) */
+  minLines?: number;
+  /** 最少金额锚点数(默认 3) */
+  minAnchors?: number;
+  /** 最少成行数(默认 3) */
+  minRows?: number;
+}
+
 /**
  * 解析粘贴文本 → 账单行。抛错 = 无法识别(上传页转失败态)。
  * 返回 { platform, rows, warnings }
  */
-export function parsePastedText(raw: string): { platform: "alipay" | "wechat"; rows: BillRow[]; warnings: string[] } {
+export function parsePastedText(
+  raw: string,
+  opts: ParseOptions = {},
+): { platform: "alipay" | "wechat"; rows: BillRow[]; warnings: string[] } {
   const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length < 4) throw new Error("内容过短,请从账单页完整复制后粘贴");
+  if (lines.length < (opts.minLines ?? 4)) throw new Error("内容过短,请从账单页完整复制后粘贴");
 
   const platform: "alipay" | "wechat" = /微信(支付)?/.test(raw) && !/支付宝/.test(raw) ? "wechat" : "alipay";
 
@@ -97,9 +125,24 @@ export function parsePastedText(raw: string): { platform: "alipay" | "wechat"; r
   lines.forEach((l, i) => {
     if (looksLikeAmountLine(l) && extractAmount(l)) anchors.push(i);
   });
-  if (anchors.length < 3) throw new Error("未找到足够账目,请确认从「账单」页全选复制");
+  if (anchors.length < (opts.minAnchors ?? 3)) throw new Error("未找到足够账目,请确认从「账单」页全选复制");
 
-  /* ② 逐锚点组装:名称(上优先 —— 微信/支付宝都把商户名放在金额上方;下兜底)+ 日期(向上最近) */
+  /* ①-b 序号配对(OCR):第 k 个金额 ↔ 第 k 个日期。与日期在上/在下无关 */
+  const dateLines: number[] = [];
+  if (opts.dateSearch === "pair") {
+    lines.forEach((l, i) => {
+      if (extractDate(l)) dateLines.push(i);
+    });
+  }
+  const pairedTime = new Map<number, string>();
+  if (opts.dateSearch === "pair" && dateLines.length === anchors.length) {
+    anchors.forEach((ai, k) => {
+      const di = dateLines[k];
+      pairedTime.set(ai, `${extractDate(lines[di])} ${extractClock(lines[di])}`);
+    });
+  }
+
+  /* ② 逐锚点组装:名称(上优先 —— 微信/支付宝都把商户名放在金额上方;下兜底)+ 日期 */
   const rows: BillRow[] = [];
   for (const i of anchors) {
     const amt = extractAmount(lines[i])!;
@@ -118,12 +161,27 @@ export function parsePastedText(raw: string): { platform: "alipay" | "wechat"; r
     for (let j = i - 1; j >= Math.max(0, i - 3) && !name; j--) name = nameAt(j);
     for (let j = i + 1; j < Math.min(lines.length, i + 3) && !name; j++) name = nameAt(j);
 
-    let time = "";
-    for (let j = i; j > Math.max(-1, i - 4); j--) {
-      const d = extractDate(lines[j]);
-      if (d) {
-        time = `${d} 00:00:00`;
-        break;
+    /* 日期:优先用序号配对结果;配不上时 OCR 走"上下最近",粘贴走"向上最近" */
+    const mode = opts.dateSearch ?? "up"; // 默认必须是 up(纯文本粘贴的既有行为)
+    let time = pairedTime.get(i) ?? "";
+    if (!time && mode !== "up") {
+      for (let d = 0; d <= 3 && !time; d++) {
+        for (const j of [i + d, i - d]) {
+          if (j < 0 || j >= lines.length) continue;
+          const found = extractDate(lines[j]);
+          if (found) {
+            time = `${found} ${extractClock(lines[j])}`;
+            break;
+          }
+        }
+      }
+    } else if (!time) {
+      for (let j = i; j > Math.max(-1, i - 4); j--) {
+        const found = extractDate(lines[j]);
+        if (found) {
+          time = `${found} 00:00:00`;
+          break;
+        }
       }
     }
     rows.push({
@@ -137,7 +195,7 @@ export function parsePastedText(raw: string): { platform: "alipay" | "wechat"; r
     });
   }
 
-  if (rows.length < 3) throw new Error(`只识别到 ${rows.length} 笔,请确认复制了完整账单范围`);
+  if (rows.length < (opts.minRows ?? 3)) throw new Error(`只识别到 ${rows.length} 笔,请确认复制了完整账单范围`);
 
   return { platform, rows, warnings: [] };
 }

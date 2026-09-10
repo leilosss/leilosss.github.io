@@ -149,6 +149,59 @@ function matchRule(text: string): Rule | null {
   return named || generic;
 }
 
+/** 编辑距离 ≤1 判定(仅用于拉丁品牌词的 OCR 纠错,不做通用模糊匹配) */
+function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let diff = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    if (++diff > 1) return false;
+    if (a.length > b.length) i++;
+    else if (a.length < b.length) j++;
+    else {
+      i++;
+      j++;
+    }
+  }
+  return diff + (a.length - i) + (b.length - j) <= 1;
+}
+
+/**
+ * 文本 → 规范商户名(命中关键词库且非通用规则时)。
+ * 供 OCR 路径归一化商户名用:OCR 对同一商户常给出不同识别结果
+ * (「SpotifyPremium订阅」/「SpotifyPremium订闻」),而识别引擎按
+ * 「商户名+金额」分组,不改写就会被拆成两个订阅。这里复用同一份关键词库,
+ * 让它们归到同一个规范名。
+ *
+ * 另加一层保守的 OCR 纠错:拉丁品牌词差一个字母也算命中(Netfix → Netflix)。
+ * 只对长度 ≥5、前 3 个字母一致的拉丁词生效 —— 手机截图上的错字是常态,
+ * 而一个错字就会让同一个订阅被拆成两条、周期规律失效。
+ */
+export function canonicalMerchant(text: string): string | null {
+  const rule = matchRule(text);
+  if (rule && !rule.generic) return rule.name;
+
+  const tokens = text.toLowerCase().match(/[a-z][a-z0-9+.]{3,}/g) ?? [];
+  if (!tokens.length) return null;
+  for (const r of KEYWORD_RULES) {
+    if (r.generic) continue;
+    for (const kw of r.keywords) {
+      if (!/^[a-z][a-z0-9+.]{3,}$/.test(kw)) continue; // 只纠拉丁词
+      for (const t of tokens) {
+        if (t.slice(0, 3) === kw.slice(0, 3) && withinOneEdit(t, kw)) return r.name;
+      }
+    }
+  }
+  return null;
+}
+
 function toDt(s: string): Date | null {
   const m = s.match(/(\d{4})-(\d{2})-(\d{2})[ T]?(\d{2}:\d{2}:\d{2})?/);
   if (!m) return null;

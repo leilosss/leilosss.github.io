@@ -23,3 +23,6 @@ backup-*/
 .vercel
 # 静态构建产物(推 gh-pages 分支,不进 main)
 frontend/out/
+
+# 测试用的 lib 编译产物(test-ocr-parse.js 的依赖)
+.ocrtest/
