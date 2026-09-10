@@ -50,6 +50,11 @@ export function HeaderNav() {
 
   const reportHref = latest ? `/report?d=${latest}` : "/report?d=demo";
 
+  /* 首页自带固定报头(章节锚点),不再叠一条全站导航;顶部进度轨保留 */
+  if (pathname === "/") {
+    return <div className="progress-rail" aria-hidden><i ref={progressRef} /></div>;
+  }
+
   return (
     <>
       <div className="progress-rail" aria-hidden><i ref={progressRef} /></div>

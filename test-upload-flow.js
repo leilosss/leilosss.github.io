@@ -61,22 +61,25 @@ async function checkOverflow(page, label) {
     await ctx.close();
   }
 
-  // ---------- 2. 首页:IMPORT BILL / TRY DEMO 两个核心按钮 + 隐私三条 ----------
+  // ---------- 2. 首页(v2.6 长页):主/副 CTA + 隐私三条 + 六章锚点 ----------
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
     await p.goto(BASE + "/", { waitUntil: "networkidle" });
     await p.waitForTimeout(600);
     const txt = await p.locator("body").innerText();
-    const importBtn = await p.locator("text=IMPORT BILL").count();
-    const demoBtn = await p.locator("text=TRY DEMO").count();
-    const order = { importIdx: txt.indexOf("IMPORT BILL"), demoIdx: txt.indexOf("TRY DEMO") };
+    const importBtn = await p.locator("text=导入账单").count();
+    const demoBtn = await p.locator("text=试用演示").count();
+    const order = { importIdx: txt.indexOf("导入账单"), demoIdx: txt.indexOf("试用演示") };
     const ok = importBtn >= 1 && demoBtn >= 1 && order.importIdx > 0 && order.importIdx < order.demoIdx;
     const privacy = ["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS"].every((s) => txt.includes(s));
-    const flowShown = ["导入账单", "自动分析", "看到一年花多少", "看到一年省多少"].every((s) => txt.includes(s));
-    console.log("首页按钮: IMPORT BILL", importBtn, "| TRY DEMO", demoBtn, "| 主按钮在前:", ok ? "OK" : "FAIL");
-    console.log("首页隐私三条:", privacy ? "OK" : "FAIL", "| 流程四步:", flowShown ? "OK" : "FAIL");
-    if (!ok || !privacy || !flowShown) allOk = false;
+    // 六个章节锚点必须真实存在,否则锚点导航就是空链接
+    const missing = await p.evaluate((ids) => ids.filter((id) => !document.querySelector(id)), [
+      "#s01", "#s02", "#s03", "#s04", "#s05", "#s06",
+    ]);
+    console.log("首页按钮: 导入账单", importBtn, "| 试用演示", demoBtn, "| 主按钮在前:", ok ? "OK" : "FAIL");
+    console.log("首页隐私三条:", privacy ? "OK" : "FAIL", "| 六章锚点:", missing.length ? "缺 " + missing.join(",") : "OK");
+    if (!ok || !privacy || missing.length) allOk = false;
     await ctx.close();
   }
 

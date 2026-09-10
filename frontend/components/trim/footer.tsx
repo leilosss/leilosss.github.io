@@ -18,7 +18,7 @@ const NAV = [
 ];
 
 /** 自带完整报尾的页面不叠加全站页脚(否则页面上会出现两条 © 2026 TRIM) */
-const SELF_FOOTERED = ["/deals"];
+const SELF_FOOTERED = ["/deals", "/"];
 
 export function Footer() {
   const pathname = usePathname();

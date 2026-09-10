@@ -1,81 +1,49 @@
 // =============================================================
-// INDEX(首页 /)—— v2.0 · VALUE FIRST
-// 3 秒理解:这是什么 / 为什么需要 / 能省多少 / 下一步点哪里。
-// 结构:
-//   HERO   痛点提问 + 一句话解释 + 主 CTA + 隐私三条(第一屏可点)
-//   STORY  01 小数字 → 02 累加 ¥3,936/年 → 03 CUT/KEEP 判定 → 04 省 ¥1,836/年
-//   HOW    OPEN → IMPORT → ANALYZE → SEE SAVINGS(30 秒内出结果)
-//   CLOSE  墨带收束 CTA
-// 版式:≥1366 沿用对开(34vw 裁切线 = 中缝);<1366 单页纵向。
+// INDEX(首页 /) —— v2.6 完整长页
+// 报纸排版逻辑:固定报头(章节锚点)→ Hero → 01..06 章节 → 最终 CTA → 打赏 → 报尾。
+// 全页 1px 墨线分割,零圆角零阴影零渐变;超大标题与极小注释成对比。
+//
+// 数据同源:数字与清单全部取自 lib/sample-report + lib/report-math,
+// 与报告页算的是同一套,首页不另写一份。
+// 价格情报与打赏直接复用 /deals 的组件(DealTable / TipJar),不重复实现。
 // =============================================================
-"use client";
-
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Scissors, Zap } from "lucide-react";
 
-import { CutLine } from "@/components/trim/cut-line";
-import { PrivacyTable } from "@/components/trim/home-sections";
-import { Marquee } from "@/components/trim/marquee";
-import { ClipRevealImg, ParallaxY, Reveal } from "@/components/trim/reveal";
-import { StoryAddUp, StorySavings, StorySmall, StoryTriage } from "@/components/trim/story";
+import { DealTable } from "@/components/trim/deals/deal-table";
+import { DealsCountdown } from "@/components/trim/deals/countdown";
+import { TipJar } from "@/components/trim/deals/tip-jar";
+import {
+  ClaimAccumulate,
+  ClaimPrivacy,
+  ClaimSavings,
+  ClaimSmall,
+  ClaimTriage,
+  SectionHead,
+} from "@/components/trim/home/sections";
+import { SiteNav } from "@/components/trim/home/site-nav";
 
-// 对开栅格:≥1366 一分为二(出血毛边 | 右页正文);<1366 = 单页容器
-const SPREAD =
-  "mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8 sm:py-24 lg:px-10 " +
-  "min-[1366px]:m-0 min-[1366px]:grid min-[1366px]:w-full min-[1366px]:max-w-none " +
-  "min-[1366px]:grid-cols-[minmax(0,34vw)_minmax(0,1fr)] min-[1366px]:p-0";
+/** 全站信任三条(只陈述能证明的事实) */
+const TRUST = ["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS"];
 
-const LEAF =
-  "min-[1366px]:w-full min-[1366px]:max-w-[min(1020px,calc(100vw-34vw-2.5rem))] " +
-  "min-[1366px]:px-10 min-[1366px]:py-24";
-
-const BAND =
-  "mx-auto w-full max-w-[1280px] px-5 py-20 text-center sm:px-8 sm:py-28 lg:px-10 " +
-  "min-[1366px]:m-0 min-[1366px]:grid min-[1366px]:w-full min-[1366px]:max-w-none " +
-  "min-[1366px]:grid-cols-[minmax(0,34vw)_minmax(0,1fr)] min-[1366px]:p-0";
-
-const BAND_LEAF =
-  "min-[1366px]:w-full min-[1366px]:max-w-[min(1020px,calc(100vw-34vw-2.5rem))] " +
-  "min-[1366px]:px-10 min-[1366px]:py-28";
-
-/** 隐私三条(全站统一措辞;品牌原句,只陈述能证明的事实) */
-const PRIVACY_LINE = ["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS"];
+/** 首屏以下章节的统一内边距与滚动留白(避开固定报头) */
+const SECTION = "scroll-mt-[58px] border-t border-ink px-5 py-16 sm:px-8 sm:py-24 lg:px-10";
+const WRAP = "mx-auto w-full max-w-[1280px]";
 
 export default function Home() {
   return (
-    <div className="relative">
-      <CutLine />
+    <div id="top">
+      <SiteNav />
 
-      {/* ---------- HERO:痛点 + 价值 + 行动(第一屏内完成) ---------- */}
-      <section className="flex min-h-[calc(100svh-73px)] items-center">
-        <div className={SPREAD}>
-          {/* 出血毛边(≥1366):品牌样张墨印 + folio 边注 */}
-          <div aria-hidden className="hidden min-[1366px]:flex min-[1366px]:flex-col min-[1366px]:items-center min-[1366px]:justify-between min-[1366px]:py-24">
-            <ParallaxY speed={0.06}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/trim-mark.jpg"
-                alt=""
-                draggable={false}
-                className="h-auto w-[min(24vw,220px)] select-none mix-blend-multiply"
-              />
-            </ParallaxY>
-            <span className="folio-v mtag text-[9.5px] text-sub/70">
-              SUBSCRIPTION INTELLIGENCE · BILLS, TRIMMED.
-            </span>
-          </div>
+      <main className="pt-[54px] sm:pt-[58px]">
+        {/* ══════════ Hero ══════════ */}
+        <section className="px-5 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-16 lg:px-10">
+          <div className={WRAP}>
+            <p className="mtag text-[10px] text-rust">SUBSCRIPTION INTELLIGENCE · BILLS, TRIMMED.</p>
 
-          {/* 右页 */}
-          <div className={`relative ${LEAF}`}>
-            <div aria-hidden className="pointer-events-none absolute -top-4 right-0 w-[min(34vw,340px)] min-[1366px]:top-0 min-[1366px]:right-[3%]">
-              <ClipRevealImg src="/trim-mark.jpg" className="h-auto w-full mix-blend-multiply opacity-[0.055]" />
-            </div>
-
-            {/* 眉标:这是什么 */}
-            <p className="mtag text-[10px] text-rust">SUBSCRIPTION CLEANUP · 订阅体检</p>
-
-            {/* 痛点提问(超粗,一眼看懂) */}
-            <h1 className="mt-5 text-[clamp(40px,8.6vw,92px)] font-extrabold leading-[0.98] tracking-[-0.04em] text-ink min-[1366px]:text-[clamp(56px,5vw,104px)]">
+            {/* 三行海报式标题:同时受视口宽与高约束(min(8vw,11vh)),
+                保证 1366×768 这类矮屏也能整屏放下,不把 CTA 挤出首屏 */}
+            <h1 className="mt-6 text-[clamp(40px,min(8vw,11vh),104px)] font-extrabold leading-[1.02] tracking-[-0.045em] text-ink">
               你每年
               <br />
               在订阅上
@@ -83,181 +51,166 @@ export default function Home() {
               <span className="text-rust">浪费了多少?</span>
             </h1>
 
-            {/* 一句话解释产品 */}
-            <p className="prose-body mt-7 max-w-[40ch] text-[17px] sm:text-[18px]">
+            <p className="mt-7 max-w-[42ch] text-[16px] leading-[1.75] text-sub">
               把账单导入进来,Trim 算出你的年度订阅支出,并找出可以裁掉的部分。
             </p>
 
-            {/* 主 CTA + 次入口(第一屏可点):IMPORT BILL / TRY DEMO 两个核心按钮 */}
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
-              <Link href="/upload" className="stamp-cta self-start" aria-label="导入账单">
-                <span className="stamp-cta-inner">
-                  IMPORT BILL
-                  <ArrowRight size={15} strokeWidth={2.2} aria-hidden />
-                </span>
-              </Link>
-              <Link
-                href="/report?d=demo"
-                className="mtag border border-ink/35 px-4 py-3.5 text-center text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
-                aria-label="查看示例报告"
-              >
-                TRY DEMO
-              </Link>
-            </div>
-
-            {/* 隐私三条(信任前置) */}
-            <ul className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
-              {PRIVACY_LINE.map((p) => (
-                <li key={p} className="mtag flex items-center gap-1.5 text-[9.5px] text-sub">
-                  <svg width="10" height="8" viewBox="0 0 13 11" aria-hidden fill="none" className="text-rust">
-                    <path d="M1 5.5 L4.5 9 L12 1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {p}
+            {/* 信任三条:1px 黑框等宽字 */}
+            <ul className="mt-8 flex flex-wrap gap-2.5">
+              {TRUST.map((t) => (
+                <li key={t} className="mtag border border-ink px-3 py-2 text-[9.5px] text-ink">
+                  {t}
                 </li>
               ))}
             </ul>
 
-            {/* 可自行验证的信任信号(不做无法证明的安全宣称) */}
-            <p className="prose-sm mt-3.5 max-w-[42ch] text-[13.5px]">
-              识别在浏览器里跑 ——{" "}
-              <strong className="font-semibold text-ink">断开网络也能用</strong>,你可以自己验证这一点。
+            <div className="mt-9 flex flex-col gap-3.5 sm:flex-row sm:items-center sm:gap-5">
+              <Link href="/upload" className="btn btn-ink !px-8 !py-4 !text-[15px]">
+                导入账单
+              </Link>
+              <Link href="/report?d=demo" className="btn btn-paper !px-8 !py-4 !text-[15px]">
+                试用演示
+              </Link>
+            </div>
+
+            <p className="mtag mt-5 text-[9.5px] text-sub">≈ 30 秒完成</p>
+          </div>
+        </section>
+
+        {/* ══════════ 01 单笔感知 ══════════ */}
+        <section id="s01" className={SECTION}>
+          <div className={WRAP}>
+            <ClaimSmall />
+          </div>
+        </section>
+
+        {/* ══════════ 02 年度累加 ══════════ */}
+        <section id="s02" className={SECTION}>
+          <div className={WRAP}>
+            <ClaimAccumulate />
+          </div>
+        </section>
+
+        {/* ══════════ 03 裁剪识别 ══════════ */}
+        <section id="s03" className={SECTION}>
+          <div className={WRAP}>
+            <ClaimTriage />
+          </div>
+        </section>
+
+        {/* ══════════ 04 节省金额 ══════════ */}
+        <section id="s04" className={SECTION}>
+          <div className={WRAP}>
+            <ClaimSavings />
+          </div>
+        </section>
+
+        {/* ══════════ 05 价格情报 ══════════ */}
+        <section id="s05" className={SECTION}>
+          <div className={WRAP}>
+            <SectionHead
+              no="05"
+              title="留下的,怎么充最便宜"
+              tag="DEALS"
+              sub="砍完了该省的,再把留下的订阅充到最低价。"
+            />
+
+            {/* 大促提醒条 */}
+            <div className="mt-9 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border border-rust px-5 py-4 sm:px-6">
+              <p className="text-[14.5px] font-bold leading-relaxed text-rust sm:text-[15.5px]">
+                <Zap size={15} strokeWidth={2} aria-hidden className="mr-1.5 inline-block shrink-0 align-[-2px]" />
+                <DealsCountdown />
+                <span>,历史低价集中期,非急单建议等</span>
+              </p>
+              <p className="mtag num shrink-0 text-[9px] text-sub">更新于 09-10 19:00</p>
+            </div>
+
+            <div className="mt-7">
+              <DealTable />
+            </div>
+
+            <p className="mtag mt-3 text-[9px] leading-relaxed text-sub/85">
+              * 示例数据,实际以实时抓取为准 <span className="text-ink/25">|</span> 点击任意行查看价格趋势和跨渠道对比
             </p>
-
-            {/* 流程一眼看懂:导入 → 分析 → 一年花多少 → 一年省多少 */}
-            <ol className="mt-11 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-ink/15 pt-5">
-              {["导入账单", "自动分析", "看到一年花多少", "看到一年省多少"].map((s, i) => (
-                <li key={s} className="mtag flex items-center gap-3 text-[9.5px] text-sub">
-                  {i > 0 && <span aria-hidden className="text-ink/25">→</span>}
-                  <span className={i === 3 ? "text-rust" : ""}>{s}</span>
-                </li>
-              ))}
-              <li className="mtag ml-auto text-[9.5px] text-ink/50">≈ 30 秒</li>
-            </ol>
           </div>
+        </section>
+
+        {/* ══════════ 中缝 · 裁切虚线 ══════════ */}
+        <div aria-hidden className="flex items-center px-5 py-14 sm:px-8 sm:py-20 lg:px-10">
+          <span className="cut-rule" />
+          <span className="mx-4 flex shrink-0 items-center gap-2.5 text-ink">
+            <Scissors size={15} strokeWidth={1.6} />
+            <span className="mtag text-[10px] tracking-[0.25em]">──────</span>
+          </span>
+          <span className="cut-rule" />
         </div>
-      </section>
 
-      {/* ---------- STORY 01:小数字 ---------- */}
-      <section className="border-t border-ink/15">
-        <div className={SPREAD}>
-          <div aria-hidden className="hidden min-[1366px]:block" />
-          <div className={LEAF}>
-            <StorySmall />
+        {/* ══════════ 06 隐私说明 ══════════ */}
+        <section id="s06" className={SECTION}>
+          <div className={WRAP}>
+            <ClaimPrivacy />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ---------- STORY 02:累加 ---------- */}
-      <section className="border-t border-ink/15 bg-paperDeep">
-        <div className={SPREAD}>
-          <div aria-hidden className="hidden min-[1366px]:flex min-[1366px]:items-center min-[1366px]:justify-center">
-            <span className="folio-v mtag text-[9.5px] text-sub/60">THE REAL NUMBER</span>
-          </div>
-          <div className={LEAF}>
-            <StoryAddUp />
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- STORY 03:CUT / KEEP 判定 ---------- */}
-      <section className="border-t border-ink/15">
-        <div className={SPREAD}>
-          <div aria-hidden className="hidden min-[1366px]:flex min-[1366px]:items-center min-[1366px]:justify-center">
-            <span className="folio-v mtag text-[9.5px] text-sub/60">CUT / KEEP</span>
-          </div>
-          <div className={LEAF}>
-            <StoryTriage />
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- 纸带隔断 ---------- */}
-      <section aria-hidden className="border-t border-ink/15 bg-paper">
-        <Marquee
-          className="py-3.5"
-          itemClassName="text-[10.5px] text-ink/75"
-          items={["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS", "CUT WHAT YOU DON'T NEED", "KEEP WHAT MATTERS"]}
-        />
-      </section>
-
-      {/* ---------- STORY 04:能省多少 + CTA ---------- */}
-      <section className="border-t border-rust/40">
-        <div className={SPREAD}>
-          <div aria-hidden className="hidden min-[1366px]:flex min-[1366px]:items-center min-[1366px]:justify-center">
-            <span className="folio-v mtag text-[9.5px] text-rust/70">YOU COULD SAVE</span>
-          </div>
-          <div className={LEAF}>
-            <StorySavings />
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-7">
-              <Link href="/upload" className="stamp-cta self-start">
-                <span className="stamp-cta-inner">
-                  IMPORT BILL
-                  <ArrowRight size={15} strokeWidth={2.2} aria-hidden />
-                </span>
-              </Link>
-              <Link
-                href="/report?d=demo"
-                className="mtag border border-ink/35 px-4 py-3.5 text-center text-[11px] text-ink transition-colors hover:border-ink hover:bg-ink hover:text-paper"
-              >
-                TRY DEMO
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- 隐私:结构即承诺 ---------- */}
-      <section className="border-t border-ink/15">
-        <div className={SPREAD}>
-          <div aria-hidden className="hidden min-[1366px]:flex min-[1366px]:items-center min-[1366px]:justify-center">
-            <span className="folio-v mtag text-[9.5px] text-sub/60">PRIVACY BY STRUCTURE</span>
-          </div>
-          <div className={LEAF}>
-            <p className="mtag text-[10px] text-sub">05 — 你的账单去了哪里</p>
-            <h2 className="sect mt-4 text-ink">哪儿也没去。</h2>
-            <Reveal as="p" className="prose-body mt-6 max-w-[46ch]">
-              识别在你的浏览器里完成。没有账号,不连银行卡,账单文本不会离开这台设备。
-            </Reveal>
-            <div className="mt-10">
-              <PrivacyTable />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- 收束:墨带 CTA ---------- */}
-      <section className="bg-ink text-paper">
-        <div className={BAND}>
-          <div aria-hidden className="relative hidden min-[1366px]:flex min-[1366px]:flex-col min-[1366px]:items-center min-[1366px]:justify-center min-[1366px]:gap-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/trim-mark.jpg" alt="" draggable={false} className="h-auto w-[min(28vw,280px)] select-none invert opacity-[0.07]" />
-            <span className="folio-v mtag text-[9.5px] text-paper/45">CUT WHAT YOU DON&apos;T NEED</span>
-          </div>
-
-          <div className={BAND_LEAF}>
-            <h2 className="text-[clamp(30px,6.4vw,58px)] font-extrabold leading-[1.04] tracking-[-0.035em] text-paper">
-              现在就知道<br className="sm:hidden" />你一年能省多少。
+        {/* ══════════ 最终 CTA ══════════ */}
+        <section className="border-t border-ink px-5 py-20 sm:px-8 sm:py-28 lg:px-10">
+          <div className={`${WRAP} text-center`}>
+            <h2 className="mx-auto max-w-[16ch] text-[clamp(32px,5.6vw,66px)] font-extrabold leading-[1.04] tracking-[-0.04em] text-ink">
+              现在就知道
+              <br />
+              你一年能省多少
             </h2>
-            <p className="prose-body mx-auto mt-6 max-w-[38ch] text-paper/75">
+            <p className="mt-6 text-[15.5px] leading-relaxed text-sub">
               导入一次账单,30 秒看到结果。不需要注册。
             </p>
-            <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-8">
-              <Link href="/upload" className="stamp-cta bg-paper" style={{ borderColor: "var(--rust)" }}>
-                <span className="stamp-cta-inner">
-                  IMPORT BILL
-                  <ArrowRight size={15} strokeWidth={2.2} aria-hidden />
-                </span>
-              </Link>
-              <Link
-                href="/report?d=demo"
-                className="mtag border border-paper/40 px-4 py-3.5 text-center text-[11px] text-paper transition-colors hover:border-paper hover:bg-paper hover:text-ink"
-              >
-                TRY DEMO
-              </Link>
+            <Link href="/upload" className="btn btn-ink mt-9 !px-10 !py-[1.05rem] !text-[15.5px]">
+              导入账单
+            </Link>
+          </div>
+        </section>
+
+        {/* ══════════ 打赏 ══════════ */}
+        <section id="tip" className="scroll-mt-[58px] border-t border-ink px-5 py-16 sm:px-8 sm:py-24 lg:px-10">
+          <div className={WRAP}>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h2 className="text-[clamp(28px,4.6vw,54px)] font-extrabold leading-[1.04] tracking-[-0.04em] text-ink">
+                请裁剪师喝一杯
+              </h2>
+              <span className="mtag border border-rust px-2.5 py-1.5 text-[9.5px] text-rust">TIP JAR</span>
+            </div>
+            <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-sub">
+              Trim 永久免费。如果帮到了你,随意请一杯,心意不分多少。
+            </p>
+            <div className="mt-8">
+              <TipJar />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* ══════════ 报尾 ══════════ */}
+        <footer className="border-t border-ink px-5 pt-5 sm:px-8 lg:px-10">
+          <div className={WRAP}>
+            <nav aria-label="全站导航" className="mtag flex flex-wrap items-center gap-x-6 gap-y-1.5 text-[9px] text-sub">
+              {[
+                { label: "START", href: "/upload" },
+                { label: "DEMO", href: "/report?d=demo" },
+                { label: "HOW", href: "/guide" },
+                { label: "DEALS", href: "/deals" },
+                { label: "PRICING", href: "/pricing" },
+                { label: "ANNUAL", href: "/annual" },
+              ].map((n) => (
+                <Link key={n.label} href={n.href} className="transition-colors hover:text-rust">
+                  {n.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-t border-ink/20 py-4">
+              <p className="mtag num text-[9px] text-ink">TRIM © 2026</p>
+              <p className="mtag text-[9px] text-sub">bills, trimmed. deals, found.</p>
+            </div>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
