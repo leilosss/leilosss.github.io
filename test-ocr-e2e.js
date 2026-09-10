@@ -5,6 +5,7 @@
 // 前置:cd frontend && npm run build
 //       node SubscriptionScanner/serve-out.js      (另一个终端)
 // 运行:node SubscriptionScanner/test-ocr-e2e.js
+//       node SubscriptionScanner/test-ocr-e2e.js https://leilosss.github.io   (验线上)
 //
 // ⚠ 必须用有头模式:PaddleOCR 用 WebGL 推理,headless 里拿不到可用的 GL 上下文。
 // =============================================================
@@ -13,7 +14,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const BASE = "http://localhost:3000";
+const BASE = process.argv[2] || "http://localhost:3000";
+const LIVE = !BASE.includes("localhost");
 const OUT_PNG = path.join(os.tmpdir(), "trim-bill-shot.png");
 
 /** 九笔扣费,三个订阅各三次(与 test-ocr-parse 的样例同源) */
@@ -147,7 +149,7 @@ async function makeScreenshot(browser, rows, outPath) {
     if (thirdParty.length) throw new Error("第三方请求:\n" + thirdParty.join("\n"));
   });
 
-  await page.screenshot({ path: "C:/Users/Administrator/shot-ocr-report.png" });
+  await page.screenshot({ path: LIVE ? "C:/Users/Administrator/shot-ocr-report-live.png" : "C:/Users/Administrator/shot-ocr-report.png" });
 
   /* ---------- 多选:分段截图一起上传(也是 OCR 失败时的推荐出路) ---------- */
   console.log("\n多选分段截图(每个订阅拆在两张图里,验证跨图合并)…\n");
