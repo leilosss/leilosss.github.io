@@ -14,6 +14,7 @@ import { ensureReady, reportsStore } from "@/lib/store";
 const LINKS = [
   { label: "HOW", href: "/guide" },
   { label: "REPORT", href: null }, // 运行时解析为最近报告
+  { label: "DEALS", href: "/deals" },
   { label: "PRICING", href: "/pricing" },
 ];
 
@@ -61,20 +62,25 @@ export function HeaderNav() {
           跳到内容
         </a>
 
-        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-x-4 px-5 py-3.5 sm:gap-x-8 sm:px-8 sm:py-4 lg:px-10">
-          {/* 词标(Trim 主体 + 红裁切标记;标语在 ≥640 才出现,移动端不挤压) */}
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-x-2.5 px-4 py-3.5 sm:gap-x-8 sm:px-8 sm:py-4 lg:px-10">
+          {/* 词标(Trim 主体 + 红裁切标记;裁切标记与标语 ≥640 才出现,窄屏优先让导航放得下) */}
           <Link
             href="/"
             className="group flex shrink-0 items-baseline gap-1.5 leading-none text-ink transition-colors hover:text-rust"
             aria-label="Trim 首页"
           >
             <span className="text-[23px] font-extrabold tracking-[-0.04em] sm:text-[25px]">Trim</span>
-            <CutGlyph />
-            <span className="mtag hidden text-[9px] text-rust sm:inline">bills, trimmed.</span>
+            <span className="hidden sm:inline-flex">
+              <CutGlyph />
+            </span>
+            {/* /deals 自带报头,标语在那里出现一次即可,不在导航重复 */}
+            {pathname !== "/deals" && (
+              <span className="mtag hidden text-[9px] text-rust sm:inline">bills, trimmed.</span>
+            )}
           </Link>
 
-          {/* 导航(3 项,移动端也放得下) */}
-          <nav aria-label="主导航" className="mtag flex items-center gap-x-4 text-[9.5px] text-sub sm:gap-x-7">
+          {/* 导航(4 项:窄屏收紧间距,保证单行不横滚) */}
+          <nav aria-label="主导航" className="mtag flex items-center gap-x-2.5 text-[9.5px] text-sub sm:gap-x-7">
             {LINKS.map((l) => {
               const href = l.href ?? reportHref;
               const active = l.href ? pathname === l.href : pathname.startsWith("/report");
@@ -96,7 +102,7 @@ export function HeaderNav() {
           {/* 主 CTA(全站常驻,移动端也在) */}
           <Link
             href="/upload"
-            className="mtag shrink-0 border-2 border-rust px-3 py-2 text-[9.5px] text-rust transition-colors hover:bg-rust hover:text-paper sm:px-4 sm:py-2.5 sm:text-[10px]"
+            className="mtag shrink-0 border-2 border-rust px-2.5 py-2 text-[9.5px] text-rust transition-colors hover:bg-rust hover:text-paper sm:px-4 sm:py-2.5 sm:text-[10px]"
           >
             IMPORT
           </Link>

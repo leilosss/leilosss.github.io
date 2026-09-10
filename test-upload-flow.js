@@ -52,7 +52,7 @@ async function checkOverflow(page, label) {
   for (const [w, h, tag] of [[375, 812, "375"], [390, 844, "390"], [430, 932, "430"]]) {
     const ctx = await b.newContext({ viewport: { width: w, height: h } });
     const p = await ctx.newPage();
-    for (const [name, path] of [["home", "/"], ["upload", "/upload"], ["report-demo", "/report?d=demo"], ["guide", "/guide"], ["pricing", "/pricing"]]) {
+    for (const [name, path] of [["home", "/"], ["upload", "/upload"], ["report-demo", "/report?d=demo"], ["guide", "/guide"], ["pricing", "/pricing"], ["deals", "/deals"]]) {
       await p.goto(BASE + path, { waitUntil: "networkidle" });
       await p.waitForTimeout(name === "report-demo" ? 1600 : 800);
       const ok = await checkOverflow(p, `${tag}px ${name}`);

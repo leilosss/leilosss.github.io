@@ -260,6 +260,17 @@
   .cutline-cut { transition: transform 0.18s linear; }
 }
 
+/* 横贯页面的打孔虚线(价格情报页的中缝),与纵向裁切线同一套打孔节奏 */
+.cut-rule {
+  flex: 1 1 0%;
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--ink) 0 7px,
+    transparent 7px 14px
+  );
+}
+
 @media print {
   .progress-rail, .cutline, .no-print { display: none !important; }
   body::before { display: none; }

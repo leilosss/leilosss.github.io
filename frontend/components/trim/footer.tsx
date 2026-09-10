@@ -3,17 +3,27 @@
 // 品牌口号 + 隐私事实 + 全站导航(含商业化与工具页)。
 // 只陈述能证明的事:本地分析 / 无账号 / 不连银行卡 / 本机 7 天暂存。
 // =============================================================
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NAV = [
   { label: "START", href: "/upload" },
   { label: "DEMO", href: "/report?d=demo" },
   { label: "HOW", href: "/guide" },
+  { label: "DEALS", href: "/deals" },
   { label: "PRICING", href: "/pricing" },
   { label: "ANNUAL", href: "/annual" },
 ];
 
+/** 自带完整报尾的页面不叠加全站页脚(否则页面上会出现两条 © 2026 TRIM) */
+const SELF_FOOTERED = ["/deals"];
+
 export function Footer() {
+  const pathname = usePathname();
+  if (SELF_FOOTERED.includes(pathname)) return null;
+
   return (
     <footer className="relative z-[1] border-t border-ink/15">
       <div className="mx-auto w-full max-w-[1280px] px-5 py-9 sm:px-8 lg:px-10">
