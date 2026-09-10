@@ -1,6 +1,6 @@
 ---
 title: "Trim"
-# 第 20 版 · Trim 2.0 · Subscription Intelligence(2026-09-09,由已上线代码逐条核对)
+# 第 21 版 · Trim 2.0 + v2.3 金额口径单一来源(2026-09-10,由已上线代码逐条核对)
 world: cutting-room-paper
 tokens: paper #F2EDE4 / ink #1A1A1A / sub #6E6861 / sageDeep #3E5543(仅保留定义) / sage #5C7C68(仅保留定义) / rust #D63B2F(唯一交互/批注/划痕/焦点/选区色) / paperDeep #E7E1CE
 ---
@@ -64,6 +64,36 @@ tokens: paper #F2EDE4 / ink #1A1A1A / sub #6E6861 / sageDeep #3E5543(仅保留�
 - **新增文件**:`components/trim/story.tsx`(首页叙事)、`shop/report-headline.tsx`、
   `shop/report-ledger.tsx`、`app/pricing/page.tsx`、`app/annual/page.tsx`。
   弃用:`shop/report-bench.tsx`(拖拽台,保留在库中未引用)。
+
+### v2.3 增量(2026-09-10 · 金额口径单一来源 · 修 ¥0/YEAR)
+- **修掉 ¥0 bug(严重)**:真实账单常只有一个月的跨度,识别出的每条订阅只出现一次
+  → 没有可实测的扣费周期 → `annual_amount = null` → 各处 `?? 0` 求和
+  → 报告头条 `¥3,936/YEAR` 的位置显示 **¥0 / YEAR**,四项指标全 0
+  (实测复现:3 个订阅 → TOTAL/CUT/KEEP/SAVE 全为 ¥0)。v2.2 的守卫只覆盖
+  「0 个订阅」,没覆盖「有订阅但周期不可测」。
+- **新增 `lib/report-math.ts` = 全站唯一计算入口**:`subAnnual` / `sumAnnual` /
+  `spendSplit` / `perCycle` / `yuan` / `cycleUnit`。首页叙事、报告头条、账单清单、
+  复制清单、裁剪小票、年度体检全部改从这里取值,**不再各算各的**。
+  Demo 的 ¥3,936 与 ¥1,836 也改为由订阅推导(原为手写常量),首页与报告从此
+  不可能分叉 —— 这是本次改动的结构性收益。
+- **年化永不缺失**:周期可测(月 24-36 / 季 85-110 / 年 320-400 天)按实测;
+  周期不可测时按最普遍的月付推算 12 期,并由 `isEstimated()` 标出,界面在
+  该数字旁如实标注「按 12 期估算」。**沿用既有原则:只陈述账单能证明的事** ——
+  因此仍不输出 UNUSED 这类使用情况判断,推算也只标注不隐藏。
+- **0 不出现**:空分组(CUT 或 KEEP 为 0 项)不渲染 `¥0 / YEAR`,统一用「—」
+  表示「这项不适用」;全部保留时不显示 ¥0 大数字,改显示「全部保留」+
+  下一步动作。行内「→ ¥0」保留(它是被划掉的单价的归零写照,不是 ¥0 头条)。
+- **头条标签对齐产品承诺**:`YOUR SUBSCRIPTION BILL · YEARLY SPEND` → `¥N / YEAR`
+  → `YOU CAN CUT · 你可以裁掉` → `¥N / YEAR` → `POTENTIAL SAVINGS · 裁掉 N 个订阅`。
+  单位统一为 `/ YEAR` `/ MONTH`(行级 `POTENTIAL SAVING ¥N / YEAR`)。
+- **顺带修**:周期未确认时单价后缀取 `"周期待确认"[0]` 而显示「/周」→ 改用
+  专用短后缀表(月/季/年,缺失为「期」)。
+- **测试基建**:`serve-out.js`(全站 `output:"export"` 后 `next start` 不可用,
+  本地预览与测试改为静态服务 `out/`);`test-report-math.js`(11 项:¥0 守卫 /
+  Demo 承诺值 / 首页与报告同源);`test-xlsx.js`(6 项:Excel 日期序列号解析 /
+  收入行剔除 / 合计行截断 / 头条无 ¥0);`shot21.js`(截图基线)。
+  修 `test-paste.js` 自 v2.2 起失效的断言(头条文案改英文后正则未同步,导致
+  4/5 用例长期误报"解析失败"—— 数据准确性防线实际已失守)。
 
 ### v12 增量(2026-09-09 · 全站红笔车间 · 3步路径)
 - **产品路径**:「导出→上传→标记→导出结果」8 步 → **复制 → 粘贴 → 确认** 3 步;
