@@ -1,6 +1,7 @@
 // =============================================================
 // 粘贴解析回归测试(在真实浏览器里跑 —— 测的就是打包后的线上代码)
-// 前置:cd frontend && npm run build && npm run start
+// 前置:cd frontend && npm run build
+//       node SubscriptionScanner/serve-out.js   (另一个终端;全站已 output:export,next start 不可用)
 // 运行:node SubscriptionScanner/test-paste.js
 // =============================================================
 const { chromium } = require("playwright-core");
@@ -97,7 +98,9 @@ const CASES = [
       const r = await page.evaluate(() => {
         const t = document.body.innerText;
         const cnt = t.match(/(\d+)\s*个订阅\s*·\s*全部为周期/);
-        const annual = t.match(/你的订阅账单[\s\S]{0,40}?¥([\d,]+)\s*\/\s*年/);
+        // 头条标签自 v2.2 起为「YOUR SUBSCRIPTION BILL · YEARLY SPEND」+「¥N / YEAR」
+        // (旧断言写的是「你的订阅账单…/ 年」,改版后一直误报解析失败)
+        const annual = t.match(/YOUR SUBSCRIPTION BILL[\s\S]{0,60}?¥([\d,]+)\s*\/\s*(?:YEAR|年)/);
         const names = Array.from(document.querySelectorAll("section li")).map(
           (li) => (li.innerText || "").split("\n")[0].trim(),
         ).filter(Boolean);

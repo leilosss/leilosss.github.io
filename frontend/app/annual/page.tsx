@@ -9,11 +9,10 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { sumAnnual, yuan } from "@/lib/report-math";
 import { ensureReady, reportsStore } from "@/lib/store";
 import { sampleReport } from "@/lib/sample-report";
 import type { DetectResult } from "@/lib/types";
-
-const yuan = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 
 export default function AnnualPage() {
   const [latest, setLatest] = React.useState<DetectResult | null>(null);
@@ -34,7 +33,7 @@ export default function AnnualPage() {
   const shown = latest ?? demo;
   const isReal = Boolean(latest);
   const cutable = shown.subscriptions.filter((s) => s.reason && s.reason !== "ACTIVE" && s.reason !== "RECURRING");
-  const potential = cutable.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
+  const potential = sumAnnual(cutable);
   const priceUps = shown.subscriptions.filter((s) => s.prev_amount != null && s.prev_amount < s.amount);
 
   return (
@@ -55,7 +54,7 @@ export default function AnnualPage() {
       {/* ---------- 体检五项 ---------- */}
       <dl className="mt-5 border-t border-ink/15">
         {[
-          { k: "TOTAL SPEND", label: "年度订阅总支出", v: yuan(shown.summary.annual_total), tone: "ink" },
+          { k: "TOTAL SPEND", label: "年度订阅总支出", v: yuan(sumAnnual(shown.subscriptions)), tone: "ink" },
           { k: "SUBSCRIPTIONS", label: "识别到的订阅", v: `${shown.summary.sub_count} 个`, tone: "ink" },
           { k: "PRICE INCREASES", label: "检测到的涨价", v: priceUps.length ? `${priceUps.length} 项` : "无", tone: priceUps.length ? "rust" : "ink" },
           { k: "POTENTIAL SAVINGS", label: "还能省下", v: `${yuan(potential)} / 年`, tone: "rust" },

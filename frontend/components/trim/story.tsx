@@ -8,9 +8,12 @@
 import * as React from "react";
 
 import { useInViewOnce } from "@/components/trim/reveal";
+import { spendSplit, sumAnnual, yuan } from "@/lib/report-math";
 import { SMALL_PRICES, demoInitialCut, sampleReport } from "@/lib/sample-report";
 
 const SAMPLE = sampleReport();
+/** 首页与报告共用同一份计算:这里的数字就是报告页会显示的数字 */
+const SAMPLE_SPEND = sumAnnual(SAMPLE.subscriptions);
 
 /* ---------- 计数(0 → target,easeOutCubic;reduce 直达) ---------- */
 function useCount(to: number, on: boolean, dur = 1100) {
@@ -33,8 +36,6 @@ function useCount(to: number, on: boolean, dur = 1100) {
   }, [on, to, dur]);
   return n;
 }
-
-const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
 
 /* =============================================================
    ① 小数字:单看都不贵
@@ -69,14 +70,14 @@ export function StorySmall() {
    ============================================================= */
 export function StoryAddUp() {
   const { ref, on } = useInViewOnce<HTMLDivElement>(0.35, "0px 0px -16% 0px");
-  const n = useCount(SAMPLE.summary.annual_total, on);
+  const n = useCount(SAMPLE_SPEND, on);
   return (
     <div ref={ref}>
       <p className="mtag text-[10px] text-sub">02 — 但它们会累加</p>
       <h2 className="sect mt-4 text-ink">加起来,是一整年。</h2>
       <p className="figure figure-xl mt-10 text-ink">
         {yuan(n)}
-        <span className="mtag ml-2 align-top text-[11px] text-sub sm:ml-3">/ 年</span>
+        <span className="mtag ml-2 align-top text-[11px] text-sub sm:ml-3">/ YEAR</span>
       </p>
       <p className="prose-body mt-7 max-w-[46ch]">
         8 个订阅 · 月付合计 ¥328 —— 大多数人从没把它们加在一起算过。
@@ -161,18 +162,18 @@ export function StorySavings() {
   const { ref, on } = useInViewOnce<HTMLDivElement>(0.35, "0px 0px -16% 0px");
   const subs = SAMPLE.subscriptions;
   const initial = React.useMemo(() => demoInitialCut(subs), [subs]);
-  const cutList = subs.filter((s) => initial[String(s.id)] === "cut");
-  const saving = cutList.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
+  // 与报告页同一个函数算出来的「可裁金额」,不是另写一套
+  const { cutList, cut: saving } = React.useMemo(() => spendSplit(subs, initial), [subs, initial]);
   const n = useCount(saving, on);
   return (
     <div ref={ref}>
-      <p className="mtag text-[10px] text-rust">04 — 你能省下</p>
+      <p className="mtag text-[10px] text-rust">04 — YOU CAN CUT · 你能省下</p>
       <p className="figure figure-xl mt-5 text-rust">
         {yuan(n)}
-        <span className="mtag ml-2 align-top text-[11px] text-rust/70 sm:ml-3">/ 年</span>
+        <span className="mtag ml-2 align-top text-[11px] text-rust/70 sm:ml-3">/ YEAR</span>
       </p>
       <p className="mtag mt-4 text-[11px] text-ink">
-        {cutList.length} 个订阅 · 月省 ¥{Math.round(saving / 12)}
+        裁掉 {cutList.length} 个订阅 · 折合每月 ¥{Math.round(saving / 12).toLocaleString("zh-CN")}
       </p>
       <h2 className="sect mt-10 max-w-[15ch] text-ink">
         裁掉不需要的。<br />留下真正在用的。

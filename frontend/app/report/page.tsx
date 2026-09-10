@@ -11,9 +11,10 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { ReportHeadline, type Cycle } from "@/components/trim/shop/report-headline";
+import { ReportHeadline } from "@/components/trim/shop/report-headline";
 import { ReportLedger } from "@/components/trim/shop/report-ledger";
 import { downloadReceipt } from "@/lib/receipt";
+import { spendSplit, subAnnual, yuan, type Cycle } from "@/lib/report-math";
 import { ensureReady, decisionStore, reportsStore } from "@/lib/store";
 import { demoInitialCut, sampleReport } from "@/lib/sample-report";
 import type { DetectResult, Subscription } from "@/lib/types";
@@ -136,17 +137,17 @@ function ReportImpl() {
     );
   }
 
-  const cutList = subs.filter((s) => decisions[String(s.id)] === "cut");
-  const cutAnnual = cutList.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
+  // 同源口径:清单 / 复制文本 / 取消指引 / 小票 全部走 report-math
+  const { cutList, cut: cutAnnual } = spendSplit(subs, decisions);
   const platform = report.platform === "wechat" ? "wechat" : "alipay";
 
   /* ---------- 操作 ---------- */
   const handleCopyList = async () => {
     const lines = [
       `TRIM · 取消清单 · ${fmtDate(report.generated_at)}`,
-      `合计可省 ¥${Math.round(cutAnnual)} / 年`,
+      `合计可省 ${yuan(cutAnnual)} / YEAR`,
       "",
-      ...cutList.map((s) => `[CUT] ${s.name} · ¥${s.amount}/${s.period === "monthly" ? "月" : "期"} · 年省 ¥${Math.round(s.annual_amount ?? 0)}`),
+      ...cutList.map((s) => `[CUT] ${s.name} · ${yuan(s.amount)}/${s.period === "monthly" ? "月" : "期"} · 年省 ${yuan(subAnnual(s))}`),
       "",
       `取消路径:${CANCEL_GUIDES[platform]}`,
     ];
@@ -183,7 +184,6 @@ function ReportImpl() {
       <ReportHeadline
         subs={subs}
         decisions={decisions}
-        annualTotal={report.summary.annual_total}
         isDemo={isDemo}
         generatedAt={fmtDate(report.generated_at)}
         cycle={cycle}
@@ -206,7 +206,7 @@ function ReportImpl() {
           <h3 className="mt-3 text-[19px] font-extrabold tracking-[-0.02em] text-ink">{cancelFor.name}</h3>
           <p className="prose-body mt-3">{CANCEL_GUIDES[platform]}</p>
           <p className="prose-sm mt-3 text-[13.5px]">
-            取消后每年少付 <span className="num font-semibold text-rust">¥{Math.round(cancelFor.annual_amount ?? 0)}</span>。
+            取消后每年少付 <span className="num font-semibold text-rust">{yuan(subAnnual(cancelFor))}</span>。
             Trim 不会代你操作,也不接触你的账号 —— 步骤由你自己完成。
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">

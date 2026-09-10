@@ -38,8 +38,8 @@ const BAND_LEAF =
   "min-[1366px]:w-full min-[1366px]:max-w-[min(1020px,calc(100vw-34vw-2.5rem))] " +
   "min-[1366px]:px-10 min-[1366px]:py-28";
 
-/** 隐私三条(全站统一措辞;只陈述能证明的事实) */
-const PRIVACY_LINE = ["无需注册", "不连银行卡", "本地分析"];
+/** 隐私三条(全站统一措辞;品牌原句,只陈述能证明的事实) */
+const PRIVACY_LINE = ["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS"];
 
 export default function Home() {
   return (

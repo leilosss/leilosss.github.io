@@ -1,12 +1,14 @@
 // =============================================================
 // 示例报告(DEMO 模式)—— v2.0 数据源
 // 免注册、免账单即可完整体验产品价值(Try Demo 路径)。
-// 口径(与首页叙事、报告头条完全一致):
+// 口径(与首页叙事、报告头条完全一致,全部由 lib/report-math 计算得出,
+// 不手写数字 —— 这样首页和报告永远不会各说各话):
 //   8 个订阅 · 月 ¥328 · 年 ¥3,936
 //   建议 CUT 3 项 = 月 ¥153 = **年 ¥1,836**(Adobe 68 + 健身 60 + 效率 25)
 //   保留 5 项 = 月 ¥175 = 年 ¥2,100
 // 每条带 reason(裁剪/保留理由)与 usage(使用情况),让报告不只是数字。
 // =============================================================
+import { sumAnnual, type DecisionMap } from "./report-math";
 import type { DetectResult, Subscription } from "./types";
 
 function month(m: number, sub: number): { month: string; out: number; sub: number } {
@@ -80,7 +82,7 @@ export function sampleReport(): DetectResult {
       date_start: "2026-06-08",
       date_end: "2026-09-08",
       sub_count: subs.length,
-      annual_total: 3936, // 月 328 × 12
+      annual_total: sumAnnual(subs), // = 月 ¥328 × 12 = ¥3,936(由订阅推导,不写死)
     },
     subscriptions: subs,
     months,
@@ -95,9 +97,9 @@ export function sampleReport(): DetectResult {
   };
 }
 
-/** DEMO 默认建议:前 3 项(HIGH COST / UNUSED / DUPLICATE)= CUT,年省 ¥1,836 */
-export function demoInitialCut(subs: Subscription[]): Record<string, "cut" | "keep"> {
-  const map: Record<string, "cut" | "keep"> = {};
+/** DEMO 默认建议:非 ACTIVE 的 3 项(HIGH COST / UNUSED / DUPLICATE)= CUT,年省 ¥1,836 */
+export function demoInitialCut(subs: Subscription[]): DecisionMap {
+  const map: DecisionMap = {};
   subs.forEach((s) => {
     map[String(s.id)] = s.reason && s.reason !== "ACTIVE" ? "cut" : "keep";
   });

@@ -5,6 +5,7 @@
 // 输出:dataURL(...PNG)可下载;支持写剪贴板(ClipboardItem)。
 // 字体:系统 mono + sans(CJK 用系统栈),与站点语言一致。
 // =============================================================
+import { sumAnnual } from "./report-math";
 import type { DetectResult } from "./types";
 import { fmtCNY } from "./utils";
 
@@ -17,7 +18,7 @@ const SUB = "#6E6861";
 export function renderReceipt(report: DetectResult, decisions: Record<string, "cut" | "keep">): string {
   const cut = report.subscriptions.filter((s) => decisions[String(s.id)] === "cut");
   const keep = report.subscriptions.filter((s) => decisions[String(s.id)] !== "cut");
-  const cutAnnual = cut.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
+  const cutAnnual = sumAnnual(cut);
   const W = 460;
   const rowH = 34;
   const headH = 150;

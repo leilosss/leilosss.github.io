@@ -6,6 +6,7 @@
 // 间隔中位数 → 月 24-36 / 季 85-110 / 年 320-400 天窗口)+ 文本周期提示。
 // 输出与 lib/types.ts 的 DetectResult 契约完全一致,可直接渲染。
 // =============================================================
+import { subAnnual, sumAnnual } from "./report-math";
 import type { BillRow, DetectResult, Subscription } from "./types";
 
 /* ---------- 关键词库(镜像 backend/services/keywords.py) ---------- */
@@ -288,7 +289,9 @@ export function detectLocal(rows: BillRow[], platform: "alipay" | "wechat" = "al
 
   /* ---- 汇总 / 月度 / 品类 ---- */
   const total = round2(rows.reduce((n, r) => n + (r.direction === "out" ? r.amount : 0), 0));
-  const annualTotal = round2(subscriptions.reduce((n, s) => n + (s.annual_amount ?? 0), 0));
+  // 口径统一:年化总额走 report-math(缺失周期按 12 期推算),与报告页完全同源。
+  // 直接用 annual_amount 求和会在账单跨度不足时得出 0(¥0 bug 根因)。
+  const annualTotal = round2(sumAnnual(subscriptions));
   const byMonth = new Map<string, { out: number; sub: number }>();
   const flaggedSet = new Set(flags);
   for (const r of rows) {
@@ -304,7 +307,7 @@ export function detectLocal(rows: BillRow[], platform: "alipay" | "wechat" = "al
   const catMap = new Map<string, { annual: number; count: number }>();
   for (const s of subscriptions) {
     const c = catMap.get(s.category) ?? { annual: 0, count: 0 };
-    c.annual = round2(c.annual + (s.annual_amount ?? 0));
+    c.annual = round2(c.annual + subAnnual(s));
     c.count += 1;
     catMap.set(s.category, c);
   }

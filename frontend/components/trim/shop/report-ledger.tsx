@@ -14,9 +14,8 @@
 
 import * as React from "react";
 
+import { isEstimated, spendSplit, subAnnual, yuan, type DecisionMap } from "@/lib/report-math";
 import type { Subscription } from "@/lib/types";
-
-const yuan = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 
 const PERIOD_CN: Record<string, string> = {
   monthly: "月付",
@@ -24,6 +23,9 @@ const PERIOD_CN: Record<string, string> = {
   yearly: "年付",
   unknown: "周期待确认",
 };
+
+/** 单价后缀只取一个字:月/季/年;周期未确认时用「期」("周期待确认"[0] 会得到「周」—— 曾经的真 bug) */
+const PERIOD_SHORT: Record<string, string> = { monthly: "月", quarterly: "季", yearly: "年" };
 
 /** 理由标签的中文注解(只解释账单能证明的事) */
 const REASON_NOTE: Record<string, string> = {
@@ -48,7 +50,9 @@ function LedgerRow({
   onCancel: (sub: Subscription) => void;
 }) {
   const rowRef = React.useRef<HTMLLIElement | null>(null);
-  const annual = sub.annual_amount ?? 0;
+  // 年化走统一口径:账单跨度不足时按周期推算,不会出现「年 ¥0」
+  const annual = subAnnual(sub);
+  const estimated = isEstimated(sub);
   const priceUp = sub.prev_amount != null && sub.prev_amount < sub.amount;
 
   /* 横向划动裁剪(触摸与鼠标通用;≥64px 且 <400ms = 裁/留) */
@@ -129,10 +133,11 @@ function LedgerRow({
             </span>
           </p>
 
-          {/* 裁定后的收益提示 */}
+          {/* 裁定后的收益提示(点 CUT 即出现);估算口径与它限定的数字放在一起 */}
           <div className="saved-note">
             <p className="mtag pt-2 text-[9.5px] text-rust">
-              POTENTIAL SAVING {yuan(annual)} / 年
+              POTENTIAL SAVING {yuan(annual)} / YEAR
+              {estimated && <span className="text-ink/45"> · 按 12 期估算</span>}
             </p>
           </div>
         </div>
@@ -141,7 +146,7 @@ function LedgerRow({
         <div className="amt-swap shrink-0 text-right">
           <p className={`num text-[16px] font-bold ${cut ? "amt-old text-sub line-through decoration-rust decoration-1" : "text-ink"}`}>
             {yuan(sub.amount)}
-            <span className="text-[11px] font-normal text-sub/70">/{PERIOD_CN[sub.period]?.[0] ?? "期"}</span>
+            <span className="text-[11px] font-normal text-sub/70">/{PERIOD_SHORT[sub.period] ?? "期"}</span>
           </p>
           {cut ? (
             <p className="num amt-new text-[12px] font-semibold text-rust">→ ¥0</p>
@@ -191,14 +196,12 @@ export function ReportLedger({
   onCancel,
 }: {
   subs: Subscription[];
-  decisions: Record<string, "cut" | "keep">;
+  decisions: DecisionMap;
   onDecide: (id: number, d: "cut" | "keep") => void;
   onCancel: (sub: Subscription) => void;
 }) {
-  const cutList = subs.filter((s) => decisions[String(s.id)] === "cut");
-  const keepList = subs.filter((s) => decisions[String(s.id)] !== "cut");
-  const cutAnnual = cutList.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
-  const keepAnnual = keepList.reduce((n, s) => n + (s.annual_amount ?? 0), 0);
+  // 与头条同源:分栏总额同样走 report-math
+  const { cutList, keepList, cut: cutAnnual, keep: keepAnnual } = spendSplit(subs, decisions);
 
   const section = (
     title: string,
@@ -214,10 +217,13 @@ export function ReportLedger({
           <span className={tone === "rust" ? "text-rust" : "text-ink"}>{en}</span>
           <span className="normal-case tracking-normal text-sub">{title} · {list.length} 项</span>
         </h2>
-        <p className={`num text-[15px] font-bold ${tone === "rust" ? "text-rust" : "text-ink"}`}>
-          {yuan(total)}
-          <span className="mtag ml-1.5 text-[9px] text-sub">/ 年</span>
-        </p>
+        {/* 空分组不显示 ¥0 / YEAR(读起来像故障)—— 下面的空态文案已经说明了情况 */}
+        {list.length > 0 && (
+          <p className={`num text-[15px] font-bold ${tone === "rust" ? "text-rust" : "text-ink"}`}>
+            {yuan(total)}
+            <span className="mtag ml-1.5 text-[9px] text-sub">/ YEAR</span>
+          </p>
+        )}
       </div>
       {list.length === 0 ? (
         <p className="prose-sm border-b border-ink/12 py-6 text-[14px]">{empty}</p>
