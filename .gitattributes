@@ -1,5 +1,3 @@
-# OCR 推理脚本与模型按二进制处理。
-# 本机 core.autocrlf=true:这些文件里含 \n 字节的二进制权重(data 分片)
-# 一旦被当成文本,检出时会被换成 CRLF,**模型直接损坏且不会有任何报错**
-# (表现为识别结果全空)。固定为 binary 杜绝此类转换。
-frontend/public/ocr/** binary
+# OCR 推理脚本与模型按二进制处理(检出时不做换行转换)。
+# 本文件在 gh-pages 分支:产物直接铺在根目录,所以匹配的是 ocr/**。
+ocr/** binary
