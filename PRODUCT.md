@@ -44,7 +44,9 @@ Next.js 14(App Router)· TypeScript · Tailwind CSS v3 · 手写 CSS keyframes(g
   与当前静态源码不兼容,**同步上去会构建失败**,除非先把 Dockerfile 改成 nginx 托管 out/。
 
 ## Capabilities and Constraints
-- 支持:支付宝 CSV(旧/新表头、GBK/UTF-8、CRLF/LF 混用、脏引号)、微信 xlsx/csv(分隔行、序列号时间、千分位)。
+- 支持:支付宝 CSV(旧/新表头、GBK/UTF-8、CRLF/LF 混用、脏引号)、微信 xlsx/csv(分隔行、序列号时间、千分位)、
+  **Word .docx(交易明细证明转存,按表头定位列;旧版 .doc 给"另存为"指引)**、粘贴文本、账单截图(本机 OCR)。
+- ⚠️ 引擎不依赖输入顺序:真实导出普遍"新的在前",`detectLocal` 分组后按时间升序再算间隔(2026-09-11 修)。
 - `/report/demo` 为 8 条样本的演示报告,必须标注"示例数据";真实报告路径含报告 id。
 - 硬约束(设计语言,以 DESIGN.md 的 token 表为准):禁止卡片容器/圆角/阴影/渐变/玻璃拟态/emoji 图形;
   1px 墨色 hairline、纸面 #F2EDE4、文字墨 #1A1A1A、次文字 #6E6861;v12 起

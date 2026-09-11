@@ -453,6 +453,11 @@ const SOURCES = [
     way: "在账单页截长图,可一次选多张",
     fmt: "PNG / JPG / WEBP(本机 OCR)",
   },
+  {
+    p: "Word 文档",
+    way: "交易明细证明另存为 .docx,直接传",
+    fmt: ".docx(旧版 .doc 请先另存)",
+  },
 ];
 
 export function ClaimSupported() {
@@ -461,7 +466,7 @@ export function ClaimSupported() {
       <SectionHead
         no="06"
         title="支持哪些账单"
-        sub="支付宝与微信的账单都能吃:复制文本、导出文件、长截图,三种进法。"
+        sub="支付宝与微信的账单都能吃:复制文本、导出文件、转存的 Word、长截图,四种进法。"
       />
 
       <ul className="mt-10 border-t border-ink">

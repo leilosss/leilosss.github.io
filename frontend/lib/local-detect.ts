@@ -286,7 +286,11 @@ export function detectLocal(rows: BillRow[], platform: "alipay" | "wechat" = "al
   for (const [, a] of acc) {
     const rule = a.rule;
     const count = a.times.length;
-    const dtList = a.times.map(toDt).filter(Boolean) as Date[];
+    // **必须按时间升序再算间隔**:账单导出普遍是"新的在前"(微信/支付宝导出、
+    // 转存成 Word 的账单都是这个顺序),而间隔、首末日期、年化兜底的跨度全都依赖顺序。
+    // 不排序的后果是算出负数间隔 → 落在所有周期窗口之外 → 一笔订阅都认不出来,
+    // 且 first_at / last_at 颠倒。2026-09-11 用真实微信账单实测复现。
+    const dtList = (a.times.map(toDt).filter(Boolean) as Date[]).sort((x, y) => x.getTime() - y.getTime());
     const gaps: number[] = [];
     for (let i = 1; i < dtList.length; i++) {
       gaps.push(Math.round((dtList[i].getTime() - dtList[i - 1].getTime()) / 86400000));

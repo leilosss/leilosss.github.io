@@ -22,12 +22,20 @@ const NOISE = [
 const DATE_RE = /(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?/;
 const TIME_RE = /(\d{1,2}):(\d{2})(?::(\d{2}))?/;
 const AMOUNT_RE = /[¥￥]?\s*(-?)\s*(\d{1,6}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/;
-const PURE_SYMBOL = /^[\d\s¥￥.\-+()（）:：,，|/\\A-Za-z]*$/; // 纯数字/单号/时间行
+/** 无字母行:纯数字/日期/金额/符号 —— 一律是噪声(单号、时间、¥49.00) */
+const NO_LETTER = /^[\d\s¥￥.\-+()（）:：,，|/\\]*$/;
+/** 字母数字混排的拉丁串:订单号/商户单号(wechatjs9ec0e233619a4b8e94e7402b) */
+const LATIN_ID = /^[A-Za-z0-9\s._\-]+$/;
 
 function isNoise(line: string): boolean {
   const t = line.trim();
   if (!t) return true;
-  if (PURE_SYMBOL.test(t)) return true; // 单号/日期/纯数字行
+  if (NO_LETTER.test(t)) return true;
+  // 含数字的拉丁串 = 编号;但**纯字母不是编号** —— "Netflix""Spotify""Adobe"
+  // 是正经商户名(微信/支付宝的「交易对方」列就是裸英文名)。
+  // 注意第 2 条必须配合 NOISE 关键词表用:表头类英文词(merchant/amount/status)
+  // 已逐个列在 NOISE 里,不会因为这条放宽而漏进来。
+  if (LATIN_ID.test(t) && /\d/.test(t)) return true;
   if (NOISE.some((n) => t.toLowerCase().startsWith(n.toLowerCase()))) return true;
   return false;
 }

@@ -10,7 +10,7 @@
 //   done:抖动定格 → 0.6s 纸滑出 → 自动进报告(附手动「[ 进入裁剪 → ]」);
 //   error:纸被批回(倾斜 + 红 X)+「无法识别,请检查账单文本」。
 // 三条路径全部 100% 本地(隐私硬约束,后端零调用):
-//   文件(csv/xlsx)→ parseFileLocally;文件(txt)/粘贴文本 → parsePastedText;
+//   文件(csv/xlsx)→ parseFileLocally;文件(txt/docx)/粘贴文本 → parsePastedText;
 //   → detectLocal(浏览器内识别)。不接非官方 API,不模拟登录,不要求账号密码。
 // =============================================================
 "use client";
@@ -21,6 +21,8 @@ import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 
 import { parseFileLocally } from "@/lib/analyze";
+import { detectPlatform } from "@/lib/bill-common";
+import { docxToText } from "@/lib/docx-parse";
 import { detectLocal } from "@/lib/local-detect";
 import { ocrLinesToBillRows } from "@/lib/ocr-parse";
 import { recognizeImage, type OcrProgress } from "@/lib/ocr-local";
@@ -31,7 +33,7 @@ import { MAX_FILE_SIZE } from "@/lib/validation";
 type Phase = "idle" | "parsing" | "done" | "error";
 
 /** 可上传的账单文件(截图走本地 OCR,其余走解析器) */
-const FILE_ACCEPT = ".csv,.xlsx,.xls,.txt,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp";
+const FILE_ACCEPT = ".csv,.xlsx,.xls,.txt,.docx,.doc,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp";
 const IMAGE_RE = /\.(png|jpe?g|webp)$/i;
 
 /** 截图路径提示(用户要在账单页自己截长图,这里把路径写全) */
@@ -236,6 +238,16 @@ export function UploadBench() {
           if (file.size > MAX_FILE_SIZE) throw new Error("文件超过 10MB 上限,请导出更小时间范围的账单");
           return parsePastedText(await file.text());
         }
+        // .docx 同理:解开 Word 取出表格文本后,仍走粘贴那条解析链(不另起一套识别)
+        // 旧版 .doc 也进这里 —— docxToText 会认出 OLE 头并给出"另存为 .docx"的明确出路
+        if (/\.docx?$/i.test(file.name)) {
+          if (file.size > MAX_FILE_SIZE) throw new Error("文件超过 10MB 上限,请导出更小时间范围的账单");
+          const text = docxToText(await file.arrayBuffer());
+          const res = parsePastedText(text);
+          // 文件名与文档标题里的"微信支付/支付宝"比正文更可信(报告页取消路径要用)
+          const hinted = detectPlatform(file.name, text);
+          return hinted === "unknown" ? res : { ...res, platform: hinted };
+        }
         return parseFileLocally(file); // 本地解析(文件不出浏览器,自动识别平台)
       }, []);
     },
@@ -341,10 +353,10 @@ export function UploadBench() {
               <UploadMark />
               <span className="mtag text-[11px] text-ink">点击选择文件,或拖拽到此处</span>
               <span className="prose-sm text-[13px]">
-                CSV · XLSX · TXT
+                CSV · XLSX · TXT · DOCX
                 <span className="mx-1.5 text-ink/30">|</span>
                 <span className="text-rust">截图 PNG / JPG / WEBP(可多选)</span>
-                <span className="mt-1 block text-[12.5px] text-sub/80">单张最大 10MB</span>
+                <span className="mt-1 block text-[12.5px] text-sub/80">单张最大 10MB · 旧版 .doc 请先另存为 .docx</span>
               </span>
               <span aria-hidden className="stamp-cta pointer-events-none mt-3">
                 <span className="stamp-cta-inner !px-8 !py-4 !text-[16px]">UPLOAD BILL</span>
