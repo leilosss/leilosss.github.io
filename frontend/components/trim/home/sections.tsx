@@ -1,21 +1,33 @@
 // =============================================================
-// 首页章节(v2.6 长页)
+// 首页章节(v2.7 长页)
 // 报纸排版逻辑:左侧章节编号 + 右侧粗体标题,超大数字与极小注释成对比。
-// 数据全部来自 lib/sample-report + lib/report-math —— 与报告页同源,
-// 首页说的数字就是报告页会算出来的数字,不另写一套。
+//
+// 数据纪律(v2.3 起不变):所有数字来自 lib/sample-report + lib/report-math,
+// 档位判定来自 lib/triage —— 与报告页算的是同一套,首页不另写一份。
+// 全站不写"账单证明不了的事":识别引擎只输出高单价 / 周期未确认 / 周期稳定,
+// 示例里的「长期闲置 / 重复功能」全程标注为示例,不冒充产品能力。
 // =============================================================
 "use client";
 
 import * as React from "react";
 
+import { TierTag } from "@/components/trim/home/product-panel";
 import { useInViewOnce } from "@/components/trim/reveal";
-import { spendSplit, sumAnnual, yuan } from "@/lib/report-math";
+import { monthlyOf, periodShort, spendSplit, subAnnual, sumAnnual, yuan } from "@/lib/report-math";
 import { SMALL_PRICES, demoInitialCut, sampleReport } from "@/lib/sample-report";
+import { REASON_CN, TIER_META, TIERS, tierNote, triageSplit, type Tier } from "@/lib/triage";
 import type { Subscription } from "@/lib/types";
 
 const SAMPLE = sampleReport();
 const SAMPLE_SPEND = sumAnnual(SAMPLE.subscriptions);
 const SAMPLE_CUT = spendSplit(SAMPLE.subscriptions, demoInitialCut(SAMPLE.subscriptions));
+const SAMPLE_TIERS = triageSplit(SAMPLE.subscriptions);
+
+/** ③ 报告面板里露出的三行(2 个可裁 + 1 个待复核),档位跟着真实判定走 */
+const DEMO_REPORT_ROWS: { s: Subscription; tier: Tier }[] = [
+  ...SAMPLE_TIERS.cut.slice(0, 2).map((s) => ({ s, tier: "cut" as Tier })),
+  ...SAMPLE_TIERS.review.slice(0, 1).map((s) => ({ s, tier: "review" as Tier })),
+];
 
 /* ---------- 计数(0 → 目标,easeOutCubic;reduce 直达终值) ---------- */
 function useCount(to: number, on: boolean, dur = 1100) {
@@ -61,147 +73,314 @@ export function SectionHead({
           </h2>
           {tag && <span className="mtag border border-rust px-2.5 py-1.5 text-[9.5px] text-rust">{tag}</span>}
         </div>
-        {sub && <p className="mt-4 max-w-[46ch] text-[15px] leading-relaxed text-sub">{sub}</p>}
+        {sub && <p className="mt-4 max-w-[52ch] text-[15px] leading-relaxed text-sub">{sub}</p>}
       </div>
     </div>
   );
 }
 
 /* =============================================================
-   01 · 每一笔都很小
+   01 · 问题:每一笔都不贵
+   论点:单价从来不是问题,累加才是。
    ============================================================= */
-export function ClaimSmall() {
-  return (
-    <div>
-      <SectionHead no="01" title="每一笔都很小" sub="你的订阅,单看都不贵。" />
-      <ul className="mt-10 grid grid-cols-2 gap-px border border-ink bg-ink md:grid-cols-4">
-        {SMALL_PRICES.map((p) => (
-          <li key={p} className="bg-paper px-5 py-7 sm:px-6">
-            <p className="figure figure-md num text-ink">
-              {yuan(p)}
-              <span className="mtag ml-1.5 align-top text-[9px] text-sub">/ 月</span>
-            </p>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-6 max-w-[52ch] text-[15px] leading-relaxed text-sub">
-        一杯咖啡的钱,谁会为它专门去退订?问题从来不在单价。
-      </p>
-    </div>
-  );
-}
-
-/* =============================================================
-   02 · 但它们会累加
-   ============================================================= */
-export function ClaimAccumulate() {
-  const { ref, on } = useInViewOnce<HTMLDivElement>(0.35, "0px 0px -16% 0px");
+export function ClaimProblem() {
+  const { ref, on } = useInViewOnce<HTMLDivElement>(0.3, "0px 0px -16% 0px");
   const n = useCount(SAMPLE_SPEND, on);
   return (
     <div ref={ref}>
-      <SectionHead no="02" title="但它们会累加" />
-      <p className="figure figure-xl num mt-10 text-center text-rust">
-        {yuan(n)}
-        <span className="mtag ml-2 align-top text-[11px] text-rust/70 sm:ml-3">/ YEAR</span>
+      <SectionHead
+        no="01"
+        title="每一笔都不贵"
+        sub="问题从来不在单价,而在它们从不一起出现。"
+      />
+
+      <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-14">
+        {/* 左:四个很便宜的单价 */}
+        <div>
+          <ul className="grid grid-cols-2 gap-px border border-ink bg-ink">
+            {SMALL_PRICES.map((p) => (
+              <li key={p} className="bg-paper px-5 py-6 sm:px-6">
+                <p className="figure figure-md num text-ink">
+                  {yuan(p)}
+                  <span className="mtag ml-1.5 align-top text-[9px] text-sub">/ 月</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 max-w-[52ch] text-[15px] leading-relaxed text-sub">
+            一杯咖啡的钱,谁会为它专门去退订?
+          </p>
+        </div>
+
+        {/* 右:同一个东西加在一起 */}
+        <div className="flex flex-col justify-center border-t-2 border-ink pt-7 md:border-l-2 md:border-t-0 md:pl-12 md:pt-0">
+          <p className="mtag text-[9.5px] text-sub">
+            SUM · {SAMPLE.subscriptions.length} 项相加
+          </p>
+          <p className="figure figure-lg num mt-3 text-rust">
+            {yuan(n)}
+            <span className="mtag ml-2 align-top text-[11px] font-normal text-rust/70">/ YEAR</span>
+          </p>
+          <p className="prose-sm mt-3 text-[14px]">
+            折合每月 {yuan(monthlyOf(SAMPLE_SPEND))}。大多数人从没把它们加在一起算过。
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =============================================================
+   02 · 产品演示:三步(账单 → 识别 → 报告)
+   不解释产品,直接放产品在每一步实际处理的东西。
+   面板里的行是示例账单(全程标注),但版式与真实界面一致。
+   ============================================================= */
+const DEMO_LINES = [
+  { d: "08-01", m: "Apple", t: "自动续费", a: 6, sub: true, cycle: "月付" },
+  { d: "08-03", m: "滴滴出行", t: "快车", a: 32.5, sub: false, cycle: "" },
+  { d: "08-05", m: "Netflix", t: "会员 自动续费", a: 49, sub: true, cycle: "月付" },
+  { d: "08-08", m: "全家便利店", t: "扫码付款", a: 18, sub: false, cycle: "" },
+  { d: "08-15", m: "Adobe", t: "创意应用 自动续费", a: 68, sub: true, cycle: "月付" },
+];
+
+function DemoPanelHead({ no, title, desc }: { no: string; title: string; desc: string }) {
+  return (
+    <div className="border-b border-ink/15 px-4 py-3.5 sm:px-5">
+      <p className="mtag text-[9px] text-rust">
+        {no} · {title}
       </p>
-      <p className="mt-6 text-center text-[15px] leading-relaxed text-sub">
-        {SAMPLE.subscriptions.length} 个订阅 · 月付合计 ¥{Math.round(SAMPLE_SPEND / 12).toLocaleString("zh-CN")}
-        ,大多数人从没把它们加在一起算过。
+      <p className="mt-1.5 text-[12.5px] leading-relaxed text-sub">{desc}</p>
+    </div>
+  );
+}
+
+export function ClaimDemo() {
+  const { ref, on } = useInViewOnce<HTMLDivElement>(0.2, "0px 0px -12% 0px");
+  return (
+    <div ref={ref} className={on ? "is-triggered" : undefined}>
+      <SectionHead
+        no="02"
+        title="三步,变成一份可执行的清单"
+        sub="不用整理数据,不用选平台,不用注册。以下为示例账单的演示。"
+      />
+
+      <div className="mt-10 grid gap-px border border-ink/15 bg-ink/15 md:grid-cols-3">
+        {/* ① 账单 */}
+        <div className="bg-paper">
+          <DemoPanelHead no="①" title="账单" desc="复制账单文本,或把 CSV / XLSX / 长截图丢进来。" />
+          <ul className="px-4 py-3 sm:px-5">
+            {DEMO_LINES.map((l, i) => (
+              <li
+                key={l.d + l.m}
+                className="demo-row num flex items-baseline gap-x-2.5 border-b border-ink/10 py-2 text-[11.5px] text-sub/85 last:border-b-0"
+                style={{ "--d": `${i * 70}ms` } as React.CSSProperties}
+              >
+                <span className="shrink-0 text-sub/60">{l.d}</span>
+                <span className="min-w-0 flex-1 truncate font-sans text-[12.5px]">{l.m}</span>
+                <span className="shrink-0">-{l.a.toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ② 识别 */}
+        <div className="relative overflow-hidden bg-paper">
+          <span aria-hidden className="demo-scan" />
+          <DemoPanelHead no="②" title="本机识别" desc="按商户与扣费间隔匹配,非周期消费直接排除。" />
+          <ul className="px-4 py-3 sm:px-5">
+            {DEMO_LINES.map((l, i) => (
+              <li
+                key={l.d + l.m}
+                className="demo-row flex items-baseline gap-x-2.5 border-b border-ink/10 py-2 last:border-b-0"
+                style={{ "--d": `${240 + i * 110}ms` } as React.CSSProperties}
+              >
+                <span className={`min-w-0 flex-1 truncate text-[12.5px] font-semibold ${l.sub ? "text-ink" : "text-sub/45"}`}>
+                  {l.m}
+                </span>
+                {l.sub ? (
+                  <span className="mtag shrink-0 text-[8px] text-rust">订阅 · {l.cycle}</span>
+                ) : (
+                  <span className="mtag shrink-0 text-[8px] text-ink/25">非周期</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ③ 报告 */}
+        <div className="bg-paper">
+          <DemoPanelHead no="③" title="报告" desc="逐条给判定依据,可改、可导出取消清单。" />
+          <div className="px-4 py-4 sm:px-5">
+            <p className="figure figure-md num text-ink">
+              {yuan(SAMPLE_SPEND)}
+              <span className="mtag ml-2 align-top text-[9.5px] font-normal text-sub">/ YEAR</span>
+            </p>
+            <p className="prose-sm mt-1 text-[12.5px]">{SAMPLE.subscriptions.length} 个订阅被识别</p>
+
+            <ul className="mt-4 border-t border-ink/12">
+              {DEMO_REPORT_ROWS.map(({ s, tier }) => (
+                <li key={s.id} className="flex items-center gap-x-2.5 border-b border-ink/10 py-2">
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink">{s.name}</span>
+                  <span className="num shrink-0 text-[11.5px] text-sub">{yuan(s.amount)}/月</span>
+                  <TierTag tier={tier} />
+                </li>
+              ))}
+            </ul>
+
+            <p className="mtag mt-4 text-[9px] text-rust">
+              可裁 {yuan(SAMPLE_CUT.cut)} / YEAR · {SAMPLE_CUT.cutList.length} 项
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-5 max-w-[64ch] text-[14px] leading-relaxed text-sub">
+        ① 到 ③ 全部发生在你的浏览器里。网络断开也照样能用,识别脚本与 OCR 模型都随页面一起加载。
       </p>
     </div>
   );
 }
 
 /* =============================================================
-   03 · Trim 找出噪音(CUT / KEEP 判定)
+   03 · 订阅分析:CUT / REVIEW / KEEP 三档
+   REVIEW 这一档是刻意留的:引擎自己会说「请人工复核」,
+   证据不足的项既不该被划掉,也不该被无脑保留。
    ============================================================= */
-const REASON_CN: Record<string, string> = {
-  "HIGH COST": "单价高",
-  UNUSED: "几乎不用",
-  DUPLICATE: "功能重叠",
-  "LOW SIGNAL": "周期未确认",
-  RECURRING: "周期稳定",
-  ACTIVE: "在用",
+const TIER_SKIN: Record<Tier, { head: string; label: string; note: string }> = {
+  cut: { head: "border-rust bg-rust text-paper", label: "text-paper", note: "text-paper/70" },
+  review: { head: "border-rust bg-paper text-rust", label: "text-rust", note: "text-rust/70" },
+  keep: { head: "border-ink bg-paper text-ink", label: "text-ink", note: "text-ink/45" },
 };
 
-function TriageRow({ sub, cut }: { sub: Subscription; cut: boolean }) {
-  const reason = cut ? (sub.reason ?? "建议裁掉") : REASON_CN[sub.reason ?? ""] ?? "在用";
+function TriageRow({ sub, tier }: { sub: Subscription; tier: Tier }) {
+  const cut = tier === "cut";
   return (
-    <li className="flex items-baseline gap-x-4 border-b border-ink/15 py-3.5 last:border-b-0">
-      <span className="min-w-0 flex-1">
-        <span className={`block truncate text-[15.5px] font-semibold ${cut ? "text-sub" : "text-ink"}`}>{sub.name}</span>
-        <span className={`mtag mt-1 block text-[8.5px] ${cut ? "text-rust" : "text-ink/40"}`}>{reason}</span>
-      </span>
-      <span className={`num shrink-0 text-[14px] font-semibold ${cut ? "text-sub" : "text-ink"}`}>
-        {yuan(sub.amount)}
-        <span className="text-[11px] font-normal text-sub/70">/月</span>
-      </span>
-      <span
-        className={`mtag shrink-0 px-2 py-1 text-[8.5px] ${
-          cut ? "bg-rust text-paper" : "border border-ink text-ink"
-        }`}
-      >
-        {cut ? "CUT" : "KEEP"}
-      </span>
+    <li className="border-b border-ink/12 px-4 py-3 last:border-b-0">
+      <div className="flex items-baseline justify-between gap-x-3">
+        <span className="min-w-0">
+          <span className={`cut-strike inline-block max-w-full truncate align-bottom text-[14.5px] font-semibold ${cut ? "is-cut text-sub" : "text-ink"}`}>
+            {sub.name}
+          </span>
+        </span>
+        <span className={`num shrink-0 text-[13px] font-semibold ${cut ? "text-sub" : "text-ink"}`}>
+          {yuan(sub.amount)}
+          <span className="text-[10.5px] font-normal text-sub/70">/{periodShort(sub.period)}</span>
+        </span>
+      </div>
+      <p className="mtag mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[8.5px]">
+        <span className={cut ? "text-rust" : "text-ink/45"}>{tierNote(sub)}</span>
+        <span className="num text-sub/70">年 {yuan(subAnnual(sub))}</span>
+      </p>
     </li>
   );
 }
 
 export function ClaimTriage() {
-  const cut = SAMPLE_CUT.cutList;
-  const keep = SAMPLE_CUT.keepList;
   return (
     <div>
-      <SectionHead no="03" title="Trim 找出噪音" sub="哪些该留,哪些该裁。" />
+      <SectionHead
+        no="03"
+        title="每一项都被判过一次"
+        sub="不是简单地叫你「删」:证据充分的划掉,证据不足的交回给你。"
+      />
 
-      <div className="mt-10 grid border border-ink md:grid-cols-2">
-        {/* 左:建议裁掉 */}
-        <div className="border-b border-ink md:border-b-0 md:border-r">
-          <p className="mtag bg-rust px-5 py-3 text-[9.5px] text-paper">
-            建议裁掉 <span className="text-paper/70">CUT · {cut.length} 项</span>
-          </p>
-          <ul className="px-5">
-            {cut.map((s) => (
-              <TriageRow key={s.id} sub={s} cut />
-            ))}
-          </ul>
-        </div>
-        {/* 右:建议保留 */}
-        <div>
-          <p className="mtag bg-ink px-5 py-3 text-[9.5px] text-paper">
-            建议保留 <span className="text-paper/70">KEEP · {keep.length} 项</span>
-          </p>
-          <ul className="px-5">
-            {keep.map((s) => (
-              <TriageRow key={s.id} sub={s} cut={false} />
-            ))}
-          </ul>
-        </div>
+      <div className="mt-10 grid gap-px border border-ink/15 bg-ink/15 md:grid-cols-3">
+        {TIERS.map((tier) => {
+          const list = SAMPLE_TIERS[tier];
+          const skin = TIER_SKIN[tier];
+          const sum = sumAnnual(list);
+          return (
+            <div key={tier} className="flex flex-col bg-paper">
+              <div className={`border-b-2 px-4 py-3 ${skin.head}`}>
+                <p className="mtag text-[9.5px]">
+                  {TIER_META[tier].en}
+                  <span className={`ml-2 ${skin.note}`}>
+                    {TIER_META[tier].cn} · {list.length} 项
+                  </span>
+                </p>
+              </div>
+              <ul className="flex-1">
+                {list.map((s) => (
+                  <TriageRow key={s.id} sub={s} tier={tier} />
+                ))}
+              </ul>
+              <div className="flex items-baseline justify-between gap-x-3 border-t border-ink/20 px-4 py-3">
+                <p className="mtag text-[8.5px] text-sub">合计 / 年</p>
+                <p className={`num text-[13.5px] font-bold ${tier === "cut" ? "text-rust" : "text-ink"}`}>
+                  {list.length ? yuan(sum) : "—"}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <p className="mt-6 max-w-[56ch] text-[14.5px] leading-relaxed text-sub">
-        判定依据来自账单本身:高单价、重复功能、周期规律,你随时可以改。
-      </p>
+      {/* 判定依据:写清哪些是产品能力,哪些是示例标注 —— 不夸大 */}
+      <div className="mt-6 max-w-[76ch] border-l-2 border-ink/20 pl-5">
+        <p className="mtag text-[9px] text-sub">判定依据</p>
+        <p className="prose-sm mt-2 text-[14px]">
+          免费版只根据账单本身能证明的事初裁:年化 ≥ ¥600 归「高单价」,只出现 1 到 2 次、无法确认周期的归
+          「周期未确认」,其余按「周期稳定」保留。
+        </p>
+        <p className="prose-sm mt-2 text-[14px]">
+          上面的示例里出现了「长期闲置」「重复功能」这类判断,那是示例账单的标注 —— 真实的账单证明不了你有没有在用,
+          Trim 不会替你下这种结论,这部分留给你自己。判定在报告页随时可改。
+        </p>
+      </div>
     </div>
   );
 }
 
 /* =============================================================
-   04 · 你能省下
+   04 · 节省金额:钱从哪几项里省出来
    ============================================================= */
 export function ClaimSavings() {
-  const { ref, on } = useInViewOnce<HTMLDivElement>(0.35, "0px 0px -16% 0px");
+  const { ref, on } = useInViewOnce<HTMLDivElement>(0.3, "0px 0px -16% 0px");
   const n = useCount(SAMPLE_CUT.cut, on);
+
+  // 按理由分桶(数据驱动,不手写金额):高单价 / 闲置 / 重复 …
+  const buckets = React.useMemo(() => {
+    const map = new Map<string, { sum: number; list: Subscription[] }>();
+    for (const s of SAMPLE_CUT.cutList) {
+      const key = REASON_CN[s.reason ?? ""] ?? "其他";
+      const cur = map.get(key) ?? { sum: 0, list: [] };
+      cur.sum += subAnnual(s);
+      cur.list.push(s);
+      map.set(key, cur);
+    }
+    return [...map.entries()].sort((a, b) => b[1].sum - a[1].sum).map(([k, v]) => ({ reason: k, ...v }));
+  }, []);
+
+  const daily = Math.round(SAMPLE_CUT.cut / 365);
+
   return (
     <div ref={ref}>
       <SectionHead no="04" title="YOU CAN CUT · 你能省下" />
+
       <p className="figure figure-xl num mt-10 text-center text-rust">
         {yuan(n)}
-        <span className="mtag ml-2 align-top text-[11px] text-rust/70 sm:ml-3">/ YEAR</span>
+        <span className="mtag ml-2 align-top text-[11px] font-normal text-rust/70 sm:ml-3">/ YEAR</span>
       </p>
       <p className="mt-6 text-center text-[15px] leading-relaxed text-sub">
-        裁掉 {SAMPLE_CUT.cutList.length} 个订阅 · 折合每月 ¥{Math.round(SAMPLE_CUT.cut / 12).toLocaleString("zh-CN")}
+        裁掉 {SAMPLE_CUT.cutList.length} 个订阅 · 折合每月 {yuan(monthlyOf(SAMPLE_CUT.cut))} · 每天约 {yuan(daily)}
       </p>
+
+      {/* 省在哪几项上(示例) */}
+      <ul className="mt-12 grid gap-px border border-ink/15 bg-ink/15 sm:grid-cols-3">
+        {buckets.map((b) => (
+          <li key={b.reason} className="bg-paper px-5 py-6">
+            <p className="mtag text-[9px] text-rust">{b.reason}</p>
+            <p className="num mt-3 text-[19px] font-bold tracking-[-0.02em] text-ink">
+              {yuan(b.sum)}
+              <span className="mtag ml-1.5 align-top text-[9px] font-normal text-sub">/ 年</span>
+            </p>
+            <p className="prose-sm mt-2 text-[12.5px]">
+              {b.list.map((s) => s.name).join(" · ")}
+            </p>
+          </li>
+        ))}
+      </ul>
+
       <p className="mt-10 text-center text-[clamp(20px,2.6vw,30px)] font-extrabold leading-[1.25] tracking-[-0.03em] text-ink">
         裁掉不需要的。留下真正在用的。
       </p>
@@ -210,31 +389,97 @@ export function ClaimSavings() {
 }
 
 /* =============================================================
-   06 · 隐私:你的账单去了哪里
+   05 · 隐私:账单去了哪里(全部可自行验证,不做无法证明的宣称)
    ============================================================= */
-// 事实口径与实现一致(sec-store:本机加密暂存 7 天),不写"仅存当前会话"
 const PRIVACY = [
-  { en: "Uploaded", k: "0 个文件上传", d: "账单只在本机读取,服务端拿不到原始文件。" },
-  { en: "Processed", k: "100% 本地解析", d: "识别在浏览器里跑完,断网也能用。" },
-  { en: "Stored", k: "本机暂存 7 天", d: "加密存在这台设备上,可随时一键销毁。" },
-  { en: "Accounted", k: "0 个账号", d: "不注册、不连银行卡、不碰支付接口。" },
+  { en: "NO ACCOUNT", k: "不需要注册", d: "打开就能用,没有账号、没有邮箱、没有验证码。" },
+  { en: "NO BANK", k: "不连银行卡", d: "不申请任何银行或支付接口的授权,也不索取账号密码。" },
+  { en: "NO UPLOAD", k: "账单不上传", d: "解析在你本机完成;这个静态站点上没有能接收账单的服务端代码。" },
+  { en: "LOCAL", k: "断网也能用", d: "识别脚本与 OCR 模型随页面一起加载,不请求任何第三方域名。" },
 ];
 
 export function ClaimPrivacy() {
   return (
     <div>
-      <SectionHead no="06" title="你的账单去了哪里" sub="哪儿也没去。" />
-      <dl className="mt-10 grid gap-px border border-ink bg-ink sm:grid-cols-2 lg:grid-cols-4">
-        {PRIVACY.map((c) => (
-          <div key={c.en} className="bg-paper px-5 py-7">
-            <dt>
-              <span className="mtag block text-[9px] text-rust">{c.en}</span>
-              <span className="mt-3 block text-[17px] font-bold tracking-[-0.02em] text-ink">{c.k}</span>
-            </dt>
-            <dd className="mt-2.5 text-[13px] leading-relaxed text-sub">{c.d}</dd>
+      <SectionHead no="05" title="你的账单,哪儿也没去" sub="Your financial data stays private." />
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
+        <div>
+          <p className="text-[clamp(20px,2.4vw,28px)] font-extrabold leading-[1.3] tracking-[-0.03em] text-ink">
+            不需要先信任我们。
+            <br />
+            这些你都能自己验证。
+          </p>
+          <p className="mt-5 max-w-[46ch] text-[15px] leading-relaxed text-sub">
+            断网再打开 Trim:分析照样能跑完。账单文本与截图从头到尾没有离开过这台设备。
+          </p>
+        </div>
+        <dl>
+          {PRIVACY.map((c) => (
+            <div key={c.en} className="grid gap-x-6 gap-y-1.5 border-t border-ink/15 py-4 sm:grid-cols-[128px_minmax(0,1fr)]">
+              <dt className="mtag pt-0.5 text-[9px] text-rust">{c.en}</dt>
+              <dd>
+                <p className="text-[16px] font-bold tracking-[-0.02em] text-ink">{c.k}</p>
+                <p className="prose-sm mt-1 text-[13.5px]">{c.d}</p>
+              </dd>
+            </div>
+          ))}
+          <div className="border-t border-ink/15 pt-4">
+            <p className="prose-sm text-[13px]">
+              分析结果加密存在你这台设备上,7 天后自动过期,报告页可一键销毁。
+            </p>
           </div>
+        </dl>
+      </div>
+    </div>
+  );
+}
+
+/* =============================================================
+   06 · 支持哪些账单(回答"我的账单能用吗",这是转化前最后一道坎)
+   ============================================================= */
+const SOURCES = [
+  {
+    p: "支付宝",
+    way: "我的 → 账单 → 选择月份 → 全选复制",
+    fmt: "粘贴文本 · CSV · 截图",
+  },
+  {
+    p: "微信",
+    way: "我 → 服务 → 钱包 → 账单 → 全选复制",
+    fmt: "粘贴文本 · XLSX / CSV · 截图",
+  },
+  {
+    p: "账单截图",
+    way: "在账单页截长图,可一次选多张",
+    fmt: "PNG / JPG / WEBP(本机 OCR)",
+  },
+];
+
+export function ClaimSupported() {
+  return (
+    <div>
+      <SectionHead
+        no="06"
+        title="支持哪些账单"
+        sub="支付宝与微信的账单都能吃:复制文本、导出文件、长截图,三种进法。"
+      />
+
+      <ul className="mt-10 border-t border-ink">
+        {SOURCES.map((s) => (
+          <li
+            key={s.p}
+            className="grid gap-x-8 gap-y-2 border-b border-ink/15 py-5 sm:grid-cols-[160px_minmax(0,1fr)_minmax(0,0.8fr)]"
+          >
+            <p className="text-[16.5px] font-bold tracking-[-0.02em] text-ink">{s.p}</p>
+            <p className="text-[14.5px] leading-relaxed text-sub">{s.way}</p>
+            <p className="mtag text-[9px] text-rust sm:text-right">{s.fmt}</p>
+          </li>
         ))}
-      </dl>
+      </ul>
+
+      <p className="mt-5 max-w-[68ch] text-[14px] leading-relaxed text-sub">
+        账单里的收入、转账、退款、单笔消费会被自动排除,只留下周期性扣费。文件与截图都只在本机解析。
+      </p>
     </div>
   );
 }

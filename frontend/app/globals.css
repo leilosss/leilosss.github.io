@@ -209,7 +209,9 @@
   content: ""; position: absolute; left: -0.12em; right: -0.12em; top: 52%;
   height: 1.5px; background: var(--rust);
   transform: scaleX(0); transform-origin: left center;
+  /* --strike-delay:逐条划线的阶梯延迟(首屏面板 220ms/条);默认 0 = 点击即划 */
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--strike-delay, 0ms);
 }
 .cut-strike.is-cut::after { transform: scaleX(1); }
 /* 双线交叉(重复扣费冲突标记,仅示例图/语法图例) */
@@ -406,6 +408,35 @@
 }
 
 
+/* =============================================================
+   v2.7 增量:首屏产品面板与演示台(Show the product)
+   两处动效都很短、一次性、不循环,并且只由 IO 加 .is-on / .is-triggered 触发。
+   ============================================================= */
+/* 演示台逐行显影(阶梯延迟写在 --d 上) */
+.demo-row { opacity: 0; transform: translateY(4px); }
+@media (prefers-reduced-motion: no-preference) {
+  .demo-row { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1); transition-delay: var(--d, 0ms); }
+}
+.is-triggered .demo-row { opacity: 1; transform: none; }
+
+/* 演示台扫描线:识别动作的一次回放(自上而下扫过整个面板,不循环)
+   元素撑满容器高度、线画在自身顶边 —— translateY(0 → 100%) 正好走完容器;
+   两端各留一小段淡入淡出,避免线凭空出现/凭空消失(起步即 0 位,不留空转时间) */
+.demo-scan {
+  position: absolute; inset: 0; height: 100%;
+  border-top: 1px solid var(--rust);
+  opacity: 0; pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .is-triggered .demo-scan { animation: demo-scan 1.5s cubic-bezier(0.4, 0.1, 0.5, 1) 0.25s forwards; }
+}
+@keyframes demo-scan {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; }
   .ltrs .ch { opacity: 1; }
@@ -414,4 +445,5 @@
   .page-dip { animation: none; }
   .marquee-track { animation: none !important; }
   .tclip { clip-path: none; }
+  .demo-row { opacity: 1; transform: none; }
 }

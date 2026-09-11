@@ -27,6 +27,15 @@ export const yuan = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 /** 周期单位后缀(英文大写字,与 YOU CAN CUT / POTENTIAL SAVINGS 同一语声) */
 export const cycleUnit = (c: Cycle) => (c === "yearly" ? "/ YEAR" : "/ MONTH");
 
+/**
+ * 周期的单字后缀(行内单价用)。
+ * 周期未确认时必须给「期」而不是取首字 —— 取 "周期待确认"[0] 会得到「周」,
+ * 那是真实出现过的显示 bug(report-ledger 里曾有同名表)。
+ */
+export function periodShort(p: string): string {
+  return p === "monthly" ? "月" : p === "quarterly" ? "季" : p === "yearly" ? "年" : "期";
+}
+
 /** 年化 → 按视图周期折算 */
 export function perCycle(nAnnual: number, cycle: Cycle): number {
   return cycle === "yearly" ? nAnnual : nAnnual / 12;

@@ -61,25 +61,33 @@ async function checkOverflow(page, label) {
     await ctx.close();
   }
 
-  // ---------- 2. 首页(v2.6 长页):主/副 CTA + 隐私三条 + 六章锚点 ----------
+  // ---------- 2. 首页(v2.7 长页):首屏产品面板 + 单一主 CTA + 三档判定 + 支持的账单 ----------
   {
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
     const p = await ctx.newPage();
     await p.goto(BASE + "/", { waitUntil: "networkidle" });
-    await p.waitForTimeout(600);
+    await p.waitForTimeout(900);
     const txt = await p.locator("body").innerText();
-    const importBtn = await p.locator("text=导入账单").count();
-    const demoBtn = await p.locator("text=试用演示").count();
-    const order = { importIdx: txt.indexOf("导入账单"), demoIdx: txt.indexOf("试用演示") };
-    const ok = importBtn >= 1 && demoBtn >= 1 && order.importIdx > 0 && order.importIdx < order.demoIdx;
+    const cta = await p.locator("text=开始分析账单").count();
+    const demoLink = await p.locator("text=看示例报告").count();
+    const order = { ctaIdx: txt.indexOf("开始分析账单"), demoIdx: txt.indexOf("看示例报告") };
+    const ok = cta >= 1 && demoLink >= 1 && order.ctaIdx > 0 && order.ctaIdx < order.demoIdx;
     const privacy = ["NO ACCOUNT", "NO BANK CONNECTION", "LOCAL ANALYSIS"].every((s) => txt.includes(s));
+    // 首屏/首屏下方必须直接看到产品(示例报告面板 + 两个核心数字),不是只有文案
+    const panel = txt.includes("TRIM REPORT") && /3,936/.test(txt) && /1,836/.test(txt);
+    // 三档判定必须都在(REVIEW 是 v2.7 新增的中间档,只有 CUT/KEEP 二分是旧版)
+    const tiers = ["CUT", "REVIEW", "KEEP"].every((t) => txt.includes(t));
+    // 「支持哪些账单」要真的把两个平台 + 三种进法写出来
+    const supported = txt.includes("支持哪些账单") && txt.includes("支付宝") && txt.includes("微信");
     // 六个章节锚点必须真实存在,否则锚点导航就是空链接
     const missing = await p.evaluate((ids) => ids.filter((id) => !document.querySelector(id)), [
       "#s01", "#s02", "#s03", "#s04", "#s05", "#s06",
     ]);
-    console.log("首页按钮: 导入账单", importBtn, "| 试用演示", demoBtn, "| 主按钮在前:", ok ? "OK" : "FAIL");
-    console.log("首页隐私三条:", privacy ? "OK" : "FAIL", "| 六章锚点:", missing.length ? "缺 " + missing.join(",") : "OK");
-    if (!ok || !privacy || missing.length) allOk = false;
+    console.log("首页 CTA: 开始分析账单", cta, "| 看示例报告", demoLink, "| 主按钮在前:", ok ? "OK" : "FAIL");
+    console.log("首页产品面板:", panel ? "OK" : "FAIL", "| 隐私三条:", privacy ? "OK" : "FAIL",
+      "| CUT/REVIEW/KEEP:", tiers ? "OK" : "FAIL", "| 支持的账单:", supported ? "OK" : "FAIL",
+      "| 六章锚点:", missing.length ? "缺 " + missing.join(",") : "OK");
+    if (!ok || !panel || !privacy || !tiers || !supported || missing.length) allOk = false;
     await ctx.close();
   }
 
