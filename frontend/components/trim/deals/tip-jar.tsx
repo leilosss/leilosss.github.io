@@ -86,16 +86,15 @@ export function TipJar() {
             ))}
           </div>
 
-          {/* 收款码占位:1px 黑框(放图后直接换成 <img>,不改版式) */}
-          <div className="relative mx-auto mt-6 aspect-square w-full max-w-[248px] border border-ink">
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-              <span className="mtag text-[9px] text-sub/70">收款码位</span>
-              <span className="text-[12.5px] leading-relaxed text-sub">
-                把{pay}收款码图片放进
-                <br />
-                <span className="num text-ink">public/tip/{pay === "微信" ? "wechat" : "alipay"}.png</span>
-              </span>
-            </div>
+          {/* 收款码:1px 黑框 + 白底方图(白底是二维码本身,不参与纸面配色 —— 扫描优先) */}
+          <div className="relative mx-auto mt-6 aspect-square w-full max-w-[248px] border border-ink bg-white p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pay === "微信" ? "/tip/wechat.png" : "/tip/alipay.png"}
+              alt={`${pay}收款码`}
+              className="h-full w-full object-contain"
+              draggable={false}
+            />
           </div>
 
           <p className="mtag mt-4 text-center text-[9.5px] text-sub">长按识别 / 截图扫码</p>
