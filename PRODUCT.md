@@ -38,6 +38,12 @@ Next.js 14(App Router)· TypeScript · Tailwind CSS v3 · 手写 CSS keyframes(g
   (对标 Readymag Stories)。共享全局语法(1px 线/纸面/无卡片圆角阴影渐变),
   红笔 = 车间批注层(页/章/划/警);v12 起全站统一批注红(rust #D63B2F),
   鼠尾草绿只保留 token 定义不再使用。
+- **Trim Pro 的定位(v2.9 起)**:免费版帮你看清**这次**花了多少;Pro 帮你盯住它**下次会不会变贵**。
+  核心能力 = **本机价格监控**(已实现):每次导入账单按「服务名 + 地区 + 币种」记账(加密、400 天),
+  第二次导入起比出涨价 / 降价 / 套餐变化 / 优惠结束,并换算成「一年多花多少钱」;
+  数据不足时显示 Price unverified,**不猜**。建议只到 KEEP / REVIEW / CUT 三档,规则公开可查。
+  **尚未实现**:定时核对官方价目、主动推送提醒 —— 页面必须明写「内测中」,
+  禁止出现「实时监控 / 官方校验 / Verified from official source」这类做不到的宣称(已写进 test-price-watch.js)。
 - 部署(2026-09-10 起分叉):**现役线上 = https://leilosss.github.io/(GitHub Pages,`output:"export"` 纯静态)**,
   发布 = `cd frontend && npm run build` → 把 `out/` 推到 gh-pages 分支。
   服务器 `ubuntu@122.51.57.37` 的 Docker 站停在 9-09 旧版(standalone + FastAPI 架构),

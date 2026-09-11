@@ -93,6 +93,27 @@ async function flush(): Promise<void> {
   }
 }
 
+/* ---------- 通用密封存取(同一把本机密钥)----------
+   给"要长期保留、又不该明文落盘"的记录用(价格监控:单价与商户名属于财务信息)。
+   与报告 vault 同一套 AES-GCM,但有效期由调用方自己定 —— 价格历史要能跨月对比,
+   不能跟着 7 天一起过期。 */
+export async function sealJSON(obj: unknown): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await getKey(), new TextEncoder().encode(JSON.stringify(obj)));
+  return b64(iv) + b64(new Uint8Array(ct));
+}
+
+export async function openJSON<T>(payload: string): Promise<T | null> {
+  try {
+    const iv = unb64(payload.slice(0, 16)); // 12 字节 IV → base64 恒 16 字符
+    const ct = unb64(payload.slice(16));
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, await getKey(), ct.buffer as ArrayBuffer);
+    return JSON.parse(new TextDecoder().decode(plain)) as T;
+  } catch {
+    return null; // 损坏/换了密钥/隐私模式:当作没有记录,不抛错
+  }
+}
+
 /* ---------- 同步接口(内存副本;初始化前读写 = 空,调用方 await vaultInit) ---------- */
 export const vault = {
   reports(): Record<string, { createdAt: string; report: DetectResult }> {

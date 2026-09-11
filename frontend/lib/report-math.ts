@@ -42,13 +42,22 @@ export function perCycle(nAnnual: number, cycle: Cycle): number {
 }
 
 /**
+ * 单价 × 周期 → 年化(周期未确认按 12 期推算)。
+ * 与 subAnnual 同一口径;价格监控里只有"单价 + 周期"两个数字,
+ * 也需要年化才能算"一年多花多少",所以抽出来共用,不另立一套算法。
+ */
+export function annualOfAmount(amount: number, period: string): number {
+  if (!(amount > 0)) return 0;
+  return Math.round(amount * (ASSUMED_PERIODS[period] ?? 12));
+}
+
+/**
  * 单条订阅的年化金额 —— 全站唯一入口。
  * annual_amount 缺失时按周期推算(未确认周期按 12 期),金额为 0 时才返回 0。
  */
 export function subAnnual(s: Subscription): number {
   if (s.annual_amount != null && s.annual_amount > 0) return Math.round(s.annual_amount);
-  if (!(s.amount > 0)) return 0;
-  return Math.round(s.amount * (ASSUMED_PERIODS[s.period] ?? 12));
+  return annualOfAmount(s.amount, s.period);
 }
 
 /** 该条年化是否属于「推算」(账单未跑到一个完整周期)—— UI 用来如实标注 */

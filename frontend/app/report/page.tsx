@@ -11,11 +11,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { WatchBoard } from "@/components/trim/pro/watch-board";
 import { ReportHeadline } from "@/components/trim/shop/report-headline";
 import { ReportLedger } from "@/components/trim/shop/report-ledger";
 import { downloadReceipt } from "@/lib/receipt";
 import { spendSplit, subAnnual, yuan, type Cycle } from "@/lib/report-math";
 import { ensureReady, decisionStore, reportsStore } from "@/lib/store";
+import { watchStore } from "@/lib/watch-store";
 import { demoInitialCut, sampleReport } from "@/lib/sample-report";
 import type { DetectResult, Subscription } from "@/lib/types";
 
@@ -175,6 +177,7 @@ function ReportImpl() {
     if (!isDemo) {
       reportsStore.clearAll();
       decisionStore.remove(id);
+      void watchStore.clear(); // 价格监控记录一并清空(它也是本机数据)
     }
     router.replace("/");
   };
@@ -189,6 +192,9 @@ function ReportImpl() {
         cycle={cycle}
         onCycle={setCycle}
       />
+
+      {/* 价格监控:只在**真的**比出变化时出现(有记录但没变化 = 不出现,不占地方) */}
+      {!isDemo && <WatchBoard variant="compact" />}
 
       <div className="mt-10">
         <ReportLedger subs={subs} decisions={decisions} onDecide={handleDecide} onCancel={setCancelFor} />
@@ -245,7 +251,7 @@ function ReportImpl() {
         {confirmDestroy && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border border-rust bg-rust/[0.05] px-5 py-4">
             <p className="prose-sm text-[13.5px] text-rust">
-              确认销毁?本机全部报告与裁剪决定将立即清除,不可恢复。
+              确认销毁?本机全部报告、裁剪决定与价格监控记录将立即清除,不可恢复(价格历史清掉后,涨跌对比要从头攒起)。
             </p>
             <p className="mtag flex gap-6 text-[10px]">
               <button onClick={handleDestroy} className="bg-rust px-3.5 py-2 text-paper transition-colors hover:bg-ink">
@@ -261,12 +267,13 @@ function ReportImpl() {
         {/* 后续价值出口(先看到价值,再谈商业) */}
         <div className="mt-12 grid gap-px border border-ink/15 bg-ink/15 sm:grid-cols-2">
           <Link href="/pricing" className="group bg-paper px-5 py-6 transition-colors hover:bg-paperDeep">
-            <p className="mtag text-[9.5px] text-rust">TRIM PRO</p>
+            <p className="mtag text-[9.5px] text-rust">TRIM PRO · 价格监控</p>
             <p className="mt-2.5 text-[17px] font-bold tracking-[-0.02em] text-ink">
-              下次涨价时提醒我
+              下次涨价时,让它先告诉你
             </p>
             <p className="prose-sm mt-1.5 text-[13.5px]">
-              价格监测 · 重复扣费检测 · 年度体检 —— ¥6.9/月
+              已经记下这份账单的单价。再导入一次,涨价、降价、套餐变化会自己浮出来 ——
+              内测期间免费。
             </p>
           </Link>
           <Link href="/annual" className="group bg-paper px-5 py-6 transition-colors hover:bg-paperDeep">

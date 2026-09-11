@@ -29,6 +29,7 @@ import { recognizeImage, type OcrProgress } from "@/lib/ocr-local";
 import { parsePastedText } from "@/lib/paste-parse";
 import { reportsStore } from "@/lib/store";
 import { MAX_FILE_SIZE } from "@/lib/validation";
+import { watchReady, watchStore } from "@/lib/watch-store";
 
 type Phase = "idle" | "parsing" | "done" | "error";
 
@@ -152,6 +153,11 @@ export function UploadBench() {
         const { rows, platform } = await build();
         const report = detectLocal(rows, platform); // 全本地识别(隐私硬约束)
         const id = reportsStore.save(report);
+        // 价格监控记账:记住这次的单价(本机加密,保存 400 天),第二次导入起才可能比出涨跌。
+        // 失败不影响主流程 —— 监控是附加价值,不能挡住"看报告"这件事。
+        watchReady()
+          .then(() => watchStore.recordReport(report))
+          .catch(() => {});
         stopTimer();
         setProgress(100);
         setFound(report.summary.sub_count);

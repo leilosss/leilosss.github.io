@@ -69,6 +69,42 @@ tokens: paper #F2EDE4 / ink #1A1A1A / sub #6E6861 / sageDeep #3E5543(仅保留�
 - ⚠️ 两个文件在 `.gitattributes` 里固定为 binary(`frontend/public/tip/**` / `tip/**`),
   与 OCR 模型同一条纪律:本机 core.autocrlf=true,二进制被当文本不会有任何报错。
 
+### v2.9 增量(2026-09-11 · Trim Pro 重做:从「价格墙」到「价格监控」)
+- **起因**:`/pricing` 原本是三栏价格表(Free / Pro / Concierge),暗示的是"解锁更多功能",
+  说不清 Pro 到底买什么。用户给的方向:**不要价格墙,Pro 的价值 = 持续盯着订阅价格**。
+- **一句话定位**:免费版帮你看清**这次**花了多少,Pro 帮你盯住它**下次会不会变贵**。
+- **⚠️ 先补地基,再做界面**:查代码发现 `prev_amount` **只在示例数据里存在** ——
+  真实路径从来没有计算过涨价,而 `/annual` 却写着「下次再粘一份账单,Trim 会自动比对单价变化」。
+  这是**一句空话**。所以本轮先把「本机价格监控」真正做出来(`lib/price-watch.ts` +
+  `lib/watch-store.ts`),再谈升级界面:
+  - 每次导入账单时记账(服务名 + 地区 + 币种 为匹配键,周期/套餐不入键 —— 否则认不出「月付改年付」);
+  - 第二次导入起才可能比出结论;**只有一次记录就老实说「已记录,下次才能比」**;
+  - 记录用与报告 vault 同一把本机密钥加密,但**保存 400 天**(价格要跨月对比,7 天等于没有);
+  - DESTROY 章一并清空价格记录(文案已写明代价:涨跌对比要从头攒起)。
+- **五种信号**(与 brief 一一对应,全部由 `signalOf()` 判定,演示卡与真实卡走同一套逻辑):
+  `increase` 涨价 / `decrease` 降价 / `plan-change` 套餐变化 / `promo-end` 优惠结束(标注为推断)/
+  `unverified` 无法验证(不给任何数字)。外加内部状态 `tracking`(只有一次记录)。
+- **⚠️ 套餐变化的百分比必须走年化**:月付 ¥25 改年付 ¥188,单价是 +652%,一年却少花 ¥112;
+  拿单价涨幅当结论会彻底误导人。`plan-change` 的 pct 用年化口径算(测试里钉住了这条)。
+- **KEEP / REVIEW / CUT 规则公开**(不黑箱):降价→KEEP;涨价→REVIEW;
+  仅当 **相对涨幅 ≥25% 且年多花 ≥¥200**,或年多花 ≥¥400 才给 CUT ——
+  ¥5→¥6 是 +20% 但一年多花 ¥12,为它退订不划算,这类只提示复核。
+- **诚实红线写进测试**(`test-price-watch.js`):页面不许出现
+  "Verified from official source / 实时监控 / 实时看价 / 官方校验 / Last checked: Today" 这类
+  **本机做不到的宣称**;否定语境里提到不算(页面本身就在解释"我们不写这种话")。
+  来源行永远写实话:「来源:你的账单记录 · 最近比对 <日期>」。
+- **升级入口是情境化的,不是拦截**:Pro 页(success)在最前面显示**你本机真实的记录**
+  (WatchBoard,无记录则不渲染);报告页只在**真的比出变化**时出现一条结论带(compact);
+  体检页把原来那段空话换成真实卡片 + 如实说明。主 CTA 是「开启价格监控」→ /upload
+  (因为监控确实从导入账单开始),不是"立即升级"。
+- **`/pricing` 新结构**:价值主张(Never get surprised…)→ 你本机的记录 → 四种变化的示例卡
+  (示例数据必须带「示例」)→ 四步管线**含当前进度**(01/02 已实现 · 本机;03 核价、04 提醒 内测中)→
+  匹配规则与建议规则公开 → Free/Pro 分工(不是价格墙)→ Concierge(压缩但边界不删)→ 收束 CTA。
+- **组件**:`components/trim/pro/price-alert.tsx`(纯展示,服务端/客户端都能用)、
+  `components/trim/pro/watch-board.tsx`(客户端,`full` / `compact` 两态)、
+  `lib/price-watch.ts`(纯逻辑)、`lib/watch-store.ts`(加密存储)、`lib/price-watch-demo.ts`(示例条目)。
+  `report-math` 抽出 `annualOfAmount(amount, period)` 供价格监控共用年化口径(不另立一套算法)。
+
 #### v2.7 补:支持 Word(.docx)账单 + 修掉引擎的顺序依赖(2026-09-11)
 - **起因**:用户把微信「交易明细证明」转存成 .docx 后上传,被上传页拒收。
 - **做法**:新增 `lib/docx-parse.ts` —— .docx 就是个 zip,取 `word/document.xml`,
