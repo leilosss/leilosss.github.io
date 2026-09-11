@@ -62,6 +62,21 @@ const BASE = process.argv[2] || "http://localhost:3000";
     await ctx.close();
   }
 
+  // ---------- 3. 完全没有 JS:首屏面板必须照样读得出来 ----------
+  {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, javaScriptEnabled: false });
+    const p = await ctx.newPage();
+    await p.goto(`${BASE}/`, { waitUntil: "load" });
+    await p.waitForTimeout(500);
+    const txt = await p.locator("body").innerText();
+    const need = ["¥3,936", "¥1,836", "Adobe Creative Cloud", "CUT", "REVIEW", "KEEP", "开始分析账单"];
+    const miss = need.filter((s) => !txt.includes(s));
+    const ok = miss.length === 0;
+    console.log("④ 关闭 JS:", ok ? "OK (首屏数字/判定/CTA 全在)" : `FAIL 缺 ${miss.join(" / ")}`);
+    if (!ok) bad++;
+    await ctx.close();
+  }
+
   await b.close();
   console.log(bad ? `\n${bad} 项未通过` : "\n动效断言全过");
   process.exit(bad ? 1 : 0);

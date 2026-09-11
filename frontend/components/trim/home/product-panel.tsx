@@ -68,18 +68,9 @@ function PanelRow({ sub, i, struck }: { sub: Subscription; i: number; struck: bo
         {yuan(sub.amount)}
         <span className="text-[10.5px] font-normal text-sub/70">/{periodShort(sub.period)}</span>
       </span>
-      <TierTag
-        tier={tier}
-        style={
-          tier === "cut"
-            ? {
-                opacity: struck ? 1 : 0,
-                transition: "opacity .25s ease",
-                transitionDelay: `${i * 200 + 140}ms`,
-              }
-            : undefined
-        }
-      />
+      {/* 档位记号**不参与入场动画**:面板的可读性不能依赖 JS 跑没跑 ——
+          没有 JS 时,名字、价格、判定、金额全都照常读得到,只有划痕这一笔画缺席 */}
+      <TierTag tier={tier} />
     </li>
   );
 }
@@ -135,10 +126,7 @@ export function ProductPanel() {
         {/* 一年能省多少 */}
         <div className="border-t-2 border-rust px-4 py-5 sm:px-5">
           <p className="mtag text-[9px] text-rust">YOU CAN CUT · 可省</p>
-          <p
-            className="figure figure-md num mt-2.5 text-rust transition-opacity duration-500"
-            style={{ opacity: struck ? 1 : 0.35 }}
-          >
+          <p className="figure figure-md num mt-2.5 text-rust">
             {yuan(SPLIT.cut)}
             <span className="mtag ml-2 align-top text-[10px] font-normal text-rust/70">/ YEAR</span>
           </p>
