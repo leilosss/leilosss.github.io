@@ -3,3 +3,7 @@
 # 一旦被当成文本,检出时会被换成 CRLF,**模型直接损坏且不会有任何报错**
 # (表现为识别结果全空)。固定为 binary 杜绝此类转换。
 frontend/public/ocr/** binary
+# 收款码图片:同理按二进制固定。PNG 现在能被 git 自动识别成 binary(已核对
+# 仓库内 blob 与工作区一致),这条规则是廉价保险 —— 真被当文本处理时不会报错,
+# 只会悄悄坏掉。
+frontend/public/tip/** binary
