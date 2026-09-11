@@ -11,7 +11,7 @@ const { chromium } = require("playwright-core");
 const fs = require("fs");
 const os = require("os");
 
-const BASE = "http://localhost:3000";
+const BASE = process.argv[2] || "http://localhost:3000"; // 传线上地址即可验线上
 
 /** 同一家 Netflix,两份账单单价不同(49 → 58),用来验真实比对 */
 const bill = (price, dates) =>
